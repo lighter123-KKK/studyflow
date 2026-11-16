@@ -1,5 +1,6 @@
 import {
   STORAGE_VERSION,
+  PROJECT_ROLES,
   type AcademicState,
   type Course,
   type GroupProject,
@@ -138,7 +139,7 @@ export function isAcademicState(value: unknown): value is AcademicState {
     return false;
   }
 
-  const { courses, members, tasks, projects } = value;
+  const { courses, members, tasks, projects, projectMemberProfiles } = value;
   if (
     !Array.isArray(courses) ||
     !courses.every(isCourse) ||
@@ -147,7 +148,11 @@ export function isAcademicState(value: unknown): value is AcademicState {
     !Array.isArray(tasks) ||
     !tasks.every(isTask) ||
     !Array.isArray(projects) ||
-    !projects.every(isProject)
+    !projects.every(isProject) ||
+    (projectMemberProfiles !== undefined && (!Array.isArray(projectMemberProfiles) ||
+      !projectMemberProfiles.every((profile) => isRecord(profile) &&
+        hasStrings(profile, ["id", "projectId", "displayName"]) && isOneOf(profile.role, PROJECT_ROLES) &&
+        hasOptionalString(profile, "email") && hasOptionalString(profile, "responsibilities"))))
   ) {
     return false;
   }

@@ -7,13 +7,13 @@ import {
 } from "@tabler/icons-react";
 import { format } from "date-fns";
 import { parseDateOnly } from "@/lib/date";
-import { getDemoProjectDetails } from "@/lib/demo-project-details";
-import type { Course, GroupProject, ProjectProgress, TeamMember } from "@/lib/types";
+import type { Course, GroupProject, ProjectProgress } from "@/lib/types";
+import type { ProjectTeamMember } from "./project-utils";
 
 interface ProjectCardProps {
   project: GroupProject;
   course?: Course;
-  members: TeamMember[];
+  members: ProjectTeamMember[];
   progress: ProjectProgress;
   latestUpdate?: string;
   selected: boolean;
@@ -33,7 +33,7 @@ export function ProjectCard({
   selected,
   onSelect,
 }: ProjectCardProps) {
-  const leaderId = getDemoProjectDetails(project.id)?.leaderId;
+  const leader = members.find((member) => member.role === "Group leader");
 
   return (
     <article className={`card h-100 ${selected ? "border-primary" : ""}`}>
@@ -99,13 +99,14 @@ export function ProjectCard({
               <li
                 key={member.id}
                 className="avatar avatar-sm bg-blue-lt"
-                title={member.id === leaderId ? `${member.displayName} (Group leader)` : member.displayName}
+                title={member.id === leader?.id ? `${member.displayName} (Group leader)` : member.displayName}
               >
                 <span aria-hidden="true">{member.initials}</span>
                 <span className="visually-hidden">{member.displayName}</span>
               </li>
             ))}
           </ul>
+          {leader ? <div className="small"><strong>Group leader</strong> · {leader.displayName}</div> : null}
           <div className="text-secondary small">
             <IconClock className="icon me-1" aria-hidden="true" />
             {latestUpdate ? `Latest report ${formatRecordedAt(latestUpdate)}` : "No updates recorded"}

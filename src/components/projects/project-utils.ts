@@ -1,7 +1,30 @@
 import { isTaskAttentionNeeded } from "@/lib/selectors";
-import type { AcademicState, GroupProject, Task } from "@/lib/types";
+import { getDemoProjectDetails } from "@/lib/demo-project-details";
+import type { AcademicState, GroupProject, ProjectMemberProfile, Task, TeamMember } from "@/lib/types";
 
 export type ProjectTaskFilter = "all" | "attention";
+export type ProjectTeamMember = TeamMember & Partial<Pick<ProjectMemberProfile, "role" | "email" | "responsibilities">>;
+
+export function getProjectTeam(state: AcademicState, project: GroupProject): ProjectTeamMember[] {
+  const profiles = (state.projectMemberProfiles ?? []).filter((profile) => profile.projectId === project.id);
+  const members = new Map<string, ProjectTeamMember>();
+  const details = getDemoProjectDetails(project.id);
+  const hasLocalLeader = profiles.some((profile) => profile.role === "Group leader");
+  for (const member of state.members) {
+    if (project.memberIds.includes(member.id)) {
+      members.set(member.id, {
+        ...member,
+        role: !hasLocalLeader && member.id === details?.leaderId ? "Group leader" : "Member",
+        responsibilities: details?.responsibilities[member.id],
+      });
+    }
+  }
+  for (const { id, displayName, role, email, responsibilities } of profiles) {
+    const initials = displayName.split(/\s+/).slice(0, 2).map((name) => Array.from(name)[0]).join("").toUpperCase();
+    members.set(id, { id, displayName, initials, role, email, responsibilities });
+  }
+  return [...members.values()];
+}
 
 export function getProjectTasks(state: AcademicState, project: GroupProject): Task[] {
   const tasksById = new Map(state.tasks.map((task) => [task.id, task]));

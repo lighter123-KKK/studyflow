@@ -12,7 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import { ACADEMIC_STORAGE_KEY, isAcademicState, parseStoredState, serializeState } from "@/lib/storage";
-import { STORAGE_VERSION, type AcademicState, type Task, type TaskDraft } from "@/lib/types";
+import { STORAGE_VERSION, type AcademicState, type ProjectMemberProfile, type Task, type TaskDraft } from "@/lib/types";
 import { academicReducer } from "./academic-reducer";
 
 const EMPTY_STATE: AcademicState = {
@@ -39,6 +39,7 @@ interface AcademicContextValue {
   closeTask: () => void;
   addTask: (draft: TaskDraft) => Task;
   importTasks: (drafts: TaskDraft[]) => void;
+  saveProjectMember: (profile: Omit<ProjectMemberProfile, "id"> & { id?: string }) => void;
   updateTask: (id: string, changes: Partial<Task>, confirmation?: string) => void;
   deleteTask: (id: string) => void;
   canvasSync: { busy: boolean; message: string; syncedAt?: string };
@@ -149,6 +150,13 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
     })) });
   }, []);
 
+  const saveProjectMember = useCallback((profile: Omit<ProjectMemberProfile, "id"> & { id?: string }) => {
+    const displayName = profile.displayName.trim();
+    if (!displayName) return;
+    dispatch({ type: "project/member-save", profile: { ...profile, displayName, id: profile.id ?? uniqueId() } });
+    setToastMessage(`${displayName}’s project profile was saved.`);
+  }, []);
+
   const updateTask = useCallback((id: string, changes: Partial<Task>, confirmation?: string) => {
     dispatch({ type: "task/update", id, changes, changedAt: new Date().toISOString() });
     setToastMessage(confirmation ?? "Task changes saved.");
@@ -171,6 +179,7 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
       closeTask,
       addTask,
       importTasks,
+      saveProjectMember,
       updateTask,
       deleteTask,
       canvasSync,
@@ -188,6 +197,7 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
       closeTask,
       addTask,
       importTasks,
+      saveProjectMember,
       updateTask,
       deleteTask,
       canvasSync,

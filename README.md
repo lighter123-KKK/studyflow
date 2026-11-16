@@ -45,6 +45,7 @@ Keep PowerShell open and visit [http://127.0.0.1:3001](http://127.0.0.1:3001). T
 
 - The first sync runs when StudyFlow opens. Use **Sync Canvas** to refresh manually. StudyFlow also checks every five minutes while its page is visible.
 - Open **My Tasks**, **Deadlines**, or **Calendar** to find imported assignments. **Group Projects** shows group assignments and any team roster that Canvas exposes to your account. Dashboard shows weekly deadline counts.
+- In **Group Projects**, open **View project details** and choose **Add member**, or expand a member and choose **Edit member**. Set a project role, optional email, and responsibilities. Selecting **Group leader** transfers the leadership role within that project. These changes stay in the current browser and are retained when the same Canvas account syncs again.
 - Canvas supplies assignment dates and submission status. StudyFlow calculates initial priorities from dates. Manual priorities, effort estimates, and notes are retained in the current browser. Undated assignments appear in My Tasks, and deadlines are shown in Hong Kong time. The browser retains the last successful snapshot if a refresh fails.
 
 ## 5. Import tasks from documents or photos

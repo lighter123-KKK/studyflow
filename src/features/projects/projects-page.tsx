@@ -12,12 +12,13 @@ import { ProjectCard } from "@/components/projects/project-card";
 import { ProjectDetail } from "@/components/projects/project-detail";
 import {
   getLatestProjectUpdate,
+  getProjectTeam,
   getProjectTasks,
   type ProjectTaskFilter,
 } from "@/components/projects/project-utils";
 
 export function ProjectsPage() {
-  const { state, isHydrated, openTask, updateTask } = useAcademic();
+  const { state, isHydrated, openTask, updateTask, saveProjectMember } = useAcademic();
   const [selectedProjectId, setSelectedProjectId] = useState<string>();
   const [filter, setFilter] = useState<ProjectTaskFilter>("all");
   const [editingTask, setEditingTask] = useState<Task>();
@@ -78,7 +79,7 @@ export function ProjectsPage() {
           <h2 className="alert-heading h4 mb-1">Canvas group assignments</h2>
           <p className="mb-0">
             StudyFlow shows the group assignments and student names Canvas makes available.
-            Submission status comes from Canvas. Team roles and internal milestones are not inferred.
+            Submission status comes from Canvas. Add team members or assign roles in the project details.
           </p>
         </div>
       </div>
@@ -109,9 +110,7 @@ export function ProjectsPage() {
             <div className="row row-cards">
               {state.projects.map((project) => {
                 const tasks = getProjectTasks(state, project);
-                const members = project.memberIds
-                  .map((memberId) => state.members.find((member) => member.id === memberId))
-                  .filter((member): member is (typeof state.members)[number] => Boolean(member));
+                const members = getProjectTeam(state, project);
                 return (
                   <div className="col-12 col-lg-6 col-xxl-4" key={project.id}>
                     <ProjectCard
@@ -134,9 +133,8 @@ export function ProjectsPage() {
             headingRef={detailHeadingRef}
             project={selectedProject}
             course={state.courses.find((course) => course.id === selectedProject.courseId)}
-            members={selectedProject.memberIds
-              .map((memberId) => state.members.find((member) => member.id === memberId))
-              .filter((member): member is (typeof state.members)[number] => Boolean(member))}
+            members={getProjectTeam(state, selectedProject)}
+            onSaveMember={(member) => saveProjectMember({ ...member, projectId: selectedProject.id })}
             tasks={getProjectTasks(state, selectedProject)}
             filter={filter}
             onFilterChange={setFilter}

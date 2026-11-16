@@ -5,20 +5,23 @@ import {
   IconClock,
   IconEdit,
   IconFilter,
+  IconPlus,
 } from "@tabler/icons-react";
 import { format } from "date-fns";
-import type { Ref } from "react";
+import { useState, type Ref } from "react";
 import { parseDateOnly } from "@/lib/date";
 import { getDemoProjectDetails } from "@/lib/demo-project-details";
 import { isTaskAttentionNeeded, isTaskOverdue } from "@/lib/selectors";
-import type { Course, GroupProject, Task, TeamMember } from "@/lib/types";
-import { filterProjectTasks, getTaskRecordedAt, type ProjectTaskFilter } from "./project-utils";
+import type { Course, GroupProject, Task } from "@/lib/types";
+import { ProjectMemberForm, type MemberFormValues } from "./project-member-form";
+import { filterProjectTasks, getTaskRecordedAt, type ProjectTaskFilter, type ProjectTeamMember } from "./project-utils";
 
 interface ProjectDetailProps {
   headingRef?: Ref<HTMLHeadingElement>;
   project: GroupProject;
   course?: Course;
-  members: TeamMember[];
+  members: ProjectTeamMember[];
+  onSaveMember?: (member: MemberFormValues) => void;
   tasks: Task[];
   filter: ProjectTaskFilter;
   onFilterChange: (filter: ProjectTaskFilter) => void;
@@ -42,6 +45,7 @@ export function ProjectDetail({
   project,
   course,
   members,
+  onSaveMember,
   tasks,
   filter,
   onFilterChange,
@@ -49,6 +53,7 @@ export function ProjectDetail({
   now,
 }: ProjectDetailProps) {
   const details = getDemoProjectDetails(project.id);
+  const [memberEditor, setMemberEditor] = useState<ProjectTeamMember | null>();
   const visibleTasks = filterProjectTasks(tasks, filter, now);
   const membersById = new Map(members.map((member) => [member.id, member]));
   const presentedTasks = visibleTasks.map((task) => {
@@ -102,8 +107,18 @@ export function ProjectDetail({
       </div>
 
       <div className="card-body border-bottom">
-        <h3 className="h4 mb-3">Team members ({members.length})</h3>
-        {members.length === 0 && project.canvasUrl ? <p className="text-secondary mb-0">Canvas did not provide a team roster.</p> : null}
+        <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+          <h3 className="h4 mb-0">Team members ({members.length})</h3>
+          {onSaveMember ? <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => setMemberEditor(null)}>
+            <IconPlus className="icon" aria-hidden="true" /> Add member
+          </button> : null}
+        </div>
+        {members.length === 0 ? <p className="text-secondary">Add a member to start building this project’s roster.</p> : null}
+        {memberEditor !== undefined && onSaveMember ? (
+          <ProjectMemberForm key={memberEditor?.id ?? "new"} member={memberEditor ?? undefined}
+            onCancel={() => setMemberEditor(undefined)}
+            onSave={(member) => { onSaveMember(member); setMemberEditor(undefined); }} />
+        ) : null}
         <div className="study-project-members">
           {members.map((member) => (
             <details className="study-project-member border rounded" key={member.id}>
@@ -111,19 +126,22 @@ export function ProjectDetail({
                 <span className="avatar avatar-sm bg-blue-lt flex-shrink-0" aria-hidden="true">{member.initials}</span>
                 <span className="flex-grow-1">
                   <span className="d-block fw-semibold">{member.displayName}</span>
-                  {member.id === details?.leaderId ? <span className="badge bg-blue-lt">Group leader</span> : null}
+                  {member.role && member.role !== "Member" ? <span className="badge bg-blue-lt">{member.role}</span> : null}
                 </span>
                 <IconChevronDown className="icon flex-shrink-0" aria-hidden="true" />
               </summary>
-              <div className="border-top p-2 small">
-                <p className="mb-1 fw-semibold">
-                  {member.id === details?.leaderId ? "Project coordination" : "Project member"}
-                </p>
-                <p className="mb-0">{details?.responsibilities[member.id] ?? "No project responsibilities recorded."}</p>
+              <div className="border-top p-2 small text-break">
+                {member.email ? <p className="mb-1"><strong>Email</strong> · {member.email}</p> : null}
+                <p className="mb-0">{member.responsibilities ?? "No responsibilities recorded."}</p>
+                {onSaveMember ? <button type="button" className="btn btn-sm btn-outline-primary mt-2"
+                  aria-label={`Edit member ${member.displayName}`} onClick={() => setMemberEditor(member)}>
+                  Edit member
+                </button> : null}
               </div>
             </details>
           ))}
         </div>
+        {onSaveMember ? <p className="small text-secondary mb-0 mt-3">Member details and roles are saved in this browser.</p> : null}
       </div>
 
       <div className="card-body border-bottom py-3">

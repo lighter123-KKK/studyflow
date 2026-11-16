@@ -5,6 +5,23 @@ import { academicReducer } from "./academic-reducer";
 const changedAt = "2026-11-10T08:00:00.000Z";
 
 describe("academic reducer", () => {
+  it("transfers leadership within one project and retains member profiles after sync", () => {
+    const state = createDemoData(new Date(changedAt));
+    const withLeader = academicReducer(state, {
+      type: "project/member-save",
+      profile: { id: "member-maya", projectId: "project-hci", displayName: "Maya Wong", role: "Group leader", responsibilities: "Builds the calendar." },
+    });
+    const transferred = academicReducer(withLeader, {
+      type: "project/member-save",
+      profile: { id: "manual-member", projectId: "project-hci", displayName: "Taylor Lee", role: "Group leader" },
+    });
+    const synced = academicReducer(transferred, { type: "canvas/sync", state });
+    expect(synced.projectMemberProfiles).toMatchObject([
+      { id: "member-maya", role: "Member", responsibilities: "Builds the calendar." },
+      { id: "manual-member", role: "Group leader" },
+    ]);
+  });
+
   it("adds a task to the shared source of truth", () => {
     const state = createDemoData(new Date("2026-11-10T12:00:00+08:00"));
     const next = academicReducer(state, {

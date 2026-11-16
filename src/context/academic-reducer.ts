@@ -1,9 +1,10 @@
-import type { AcademicState, Task } from "@/lib/types";
+import type { AcademicState, ProjectMemberProfile, Task } from "@/lib/types";
 import { EXTERNAL_COURSE, sameImportSlot } from "@/lib/task-import";
 
 export type AcademicAction =
   | { type: "state/load"; state: AcademicState }
   | { type: "canvas/sync"; state: AcademicState }
+  | { type: "project/member-save"; profile: ProjectMemberProfile }
   | { type: "task/add"; task: Task }
   | { type: "task/import"; tasks: Task[] }
   | { type: "task/update"; id: string; changes: Partial<Task>; changedAt: string }
@@ -25,6 +26,7 @@ export function academicReducer(state: AcademicState, action: AcademicAction): A
       const incomingCourses = new Set(incoming.courses.map((course) => course.id));
       return {
         ...incoming,
+        projectMemberProfiles: state.projectMemberProfiles,
         courses: [
           ...incoming.courses,
           ...state.courses.filter((course) => referencedCourses.has(course.id) && !incomingCourses.has(course.id)),
@@ -44,6 +46,23 @@ export function academicReducer(state: AcademicState, action: AcademicAction): A
             priority: previous.canvasPriorityOverride ? previous.priority : task.priority,
           };
         }), ...localTasks],
+      };
+    }
+    case "project/member-save": {
+      const { profile } = action;
+      if (!state.projects.some((project) => project.id === profile.projectId)) return state;
+      const profiles = (state.projectMemberProfiles ?? []).filter((item) =>
+        item.projectId !== profile.projectId || item.id !== profile.id,
+      );
+      return {
+        ...state,
+        projectMemberProfiles: [
+          ...profiles.map((item) => profile.role === "Group leader" &&
+              item.projectId === profile.projectId && item.role === "Group leader"
+            ? { ...item, role: "Member" as const }
+            : item),
+          profile,
+        ],
       };
     }
     case "task/add":

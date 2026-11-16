@@ -19,6 +19,18 @@ export interface TeamMember {
   initials: string;
 }
 
+export const PROJECT_ROLES = ["Member", "Group leader", "Researcher", "Designer", "Developer", "Presenter"] as const;
+export type ProjectRole = typeof PROJECT_ROLES[number];
+
+export interface ProjectMemberProfile {
+  id: string;
+  projectId: string;
+  displayName: string;
+  role: ProjectRole;
+  email?: string;
+  responsibilities?: string;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -62,6 +74,7 @@ export interface AcademicState {
   members: TeamMember[];
   tasks: Task[];
   projects: GroupProject[];
+  projectMemberProfiles?: ProjectMemberProfile[];
 }
 
 export interface DashboardMetrics {

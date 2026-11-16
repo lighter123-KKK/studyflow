@@ -66,4 +66,27 @@ describe("ProjectsPage", () => {
       }
     }
   });
+
+  it("adds a member with local details and displays the project leader on both views", async () => {
+    const { unmount } = render(<AcademicProvider><ProjectsPage /></AcademicProvider>);
+    const detail = await screen.findByRole("region", { name: "Student Academic Dashboard" });
+    fireEvent.click(within(detail).getByRole("button", { name: "Add member" }));
+    const form = within(detail).getByRole("form", { name: "Add a team member" });
+    fireEvent.change(within(form).getByLabelText("Name"), { target: { value: "Taylor Lee" } });
+    fireEvent.change(within(form).getByLabelText("Project role"), { target: { value: "Group leader" } });
+    fireEvent.change(within(form).getByLabelText("Responsibilities or notes (optional)"), {
+      target: { value: "Coordinates weekly reviews." },
+    });
+    fireEvent.submit(form);
+    const profile = within(detail).getByText("Taylor Lee").closest("details")!;
+    expect(within(profile).getByText("Group leader")).toBeVisible();
+    expect(within(detail).getAllByText("Group leader")).toHaveLength(1);
+    fireEvent.click(profile.querySelector("summary")!);
+    expect(within(profile).getByText("Coordinates weekly reviews.")).toBeVisible();
+    expect(screen.getByRole("region", { name: "Project overview" })).toHaveTextContent("Group leader · Taylor Lee");
+    expect(localStorage.getItem(ACADEMIC_STORAGE_KEY)).toContain("Taylor Lee");
+    unmount();
+    render(<AcademicProvider><ProjectsPage /></AcademicProvider>);
+    expect(await screen.findByRole("region", { name: "Project overview" })).toHaveTextContent("Group leader · Taylor Lee");
+  });
 });
