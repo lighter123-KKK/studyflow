@@ -1,5 +1,7 @@
 # StudyFlow — Local Setup and User Guide
 
+**Presentation entry:** [Open StudyFlow](https://studyflow-presentation.vercel.app)
+
 StudyFlow combines read-only CityU Canvas assignments with tasks and events extracted from documents and images. This is a single-account prototype for local use. A fresh installation starts with an empty workspace.
 
 ## 1. Download and install
