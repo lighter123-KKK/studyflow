@@ -24,7 +24,7 @@ import {
 } from "@/lib/selectors";
 
 export function DashboardPage() {
-  const { state, isHydrated, openTask, canvasSync } = useAcademic();
+  const { state, isHydrated, openTask, canvasSync, presentation } = useAcademic();
   const [now] = useState(() => new Date());
 
   const view = useMemo(() => {
@@ -102,7 +102,7 @@ export function DashboardPage() {
               {canvasSync.syncedAt
                 ? `Last synced ${format(new Date(canvasSync.syncedAt), "d MMM, HH:mm")}. `
                 : ""}
-              Canvas deadlines are shown in Hong Kong time. Your planning edits are saved in this browser.
+              Canvas deadlines are shown in Hong Kong time. {presentation ? "Changes last for this presentation session." : "Your planning edits are saved in this browser."}
             </div>
           </div>
         </div>

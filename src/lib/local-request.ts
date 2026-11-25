@@ -5,3 +5,15 @@ export function isLocalPost(request: Request): boolean {
     request.headers.get("origin") === `http://${host}` &&
     (!forwardedHost || forwardedHost === host);
 }
+import { timingSafeEqual } from "node:crypto";
+
+
+export function isDemoPost(request: Request): boolean {
+  const origin = process.env.STUDYFLOW_DEMO_ORIGIN?.trim();
+  const expected = process.env.STUDYFLOW_DEMO_CODE?.trim();
+  const provided = request.headers.get("x-studyflow-demo-code");
+  if (!origin?.startsWith("https://") || request.headers.get("origin") !== origin || !expected || !provided) return false;
+  const actualBytes = Buffer.from(provided);
+  const expectedBytes = Buffer.from(expected);
+  return actualBytes.length === expectedBytes.length && timingSafeEqual(actualBytes, expectedBytes);
+}

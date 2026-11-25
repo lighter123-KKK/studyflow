@@ -75,6 +75,20 @@ Open November and December 2026 in **Calendar** to see all three entries. The ve
 | Recognized items do not appear in the planner | Check which rows were selected, then select **Import selected**. Navigate to the month shown in the preview. |
 | Port 3001 is in use | Stop the previous StudyFlow process, then try again. |
 
+## Hosted presentation
+
+Import this repository as a Next.js project in Vercel. Use Node.js 24.x and enable Fluid Compute for document processing. Add these server-side variables under **Settings → Environment Variables** and apply them to the deployment you will use:
+
+| Variable | Value |
+| --- | --- |
+| `STUDYFLOW_DEMO_ORIGIN` | The exact presentation URL origin, for example `https://studyflow-demo.vercel.app`, without a trailing slash |
+| `STUDYFLOW_DEMO_CODE` | A randomly generated presentation access code known to the presenter |
+| `DEEPSEEK_API_KEY` | Your DeepSeek API key |
+
+Redeploy after setting the variables. Open that exact URL in a private browser window. Enter your presentation access code and your own short-lived CityU Canvas token. The hosted workspace is initially empty. A successful connection loads the latest available assignments. Choose a file and select **Upload and update calendar**. Items with clear dates and source evidence are imported automatically when no duplicate is found. Review the remaining items before adding them. Files are limited to 4 MB each on the hosted demonstration.
+
+The hosted version is for the presenter to use their own account. The Canvas token and workspace stay in page memory for the duration of the presentation. Select **End presentation** and close the browser window when you finish. A refresh starts a new session. For multi-user Canvas access, register a CityU Canvas OAuth integration.
+
 ## Developer checks
 
 ```powershell

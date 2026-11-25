@@ -44,6 +44,7 @@ interface AcademicContextValue {
   deleteTask: (id: string) => void;
   canvasSync: { busy: boolean; message: string; syncedAt?: string };
   syncCanvas: () => Promise<void>;
+  presentation?: { code: string; connect: (token: string, code: string) => Promise<void> };
   showToast: (message: string) => void;
   clearToast: () => void;
 }
@@ -55,7 +56,7 @@ function uniqueId(): string {
   return `task-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-export function AcademicProvider({ children }: { children: ReactNode }) {
+export function AcademicProvider({ children, presentationMode = false }: { children: ReactNode; presentationMode?: boolean }) {
   const [state, dispatch] = useReducer(academicReducer, EMPTY_STATE);
   const [isHydrated, setIsHydrated] = useState(false);
   const [recoveryNotice, setRecoveryNotice] = useState("");
@@ -63,12 +64,14 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
   const [toastMessage, setToastMessage] = useState("");
   const [canvasSync, setCanvasSync] = useState<AcademicContextValue["canvasSync"]>({ busy: false, message: "" });
   const syncInProgress = useRef(false);
+  const presentationCredentials = useRef<{ token: string; code: string } | undefined>(undefined);
+  const [presentationCode, setPresentationCode] = useState("");
 
   useEffect(() => {
     let active = true;
     queueMicrotask(() => {
       if (!active) return;
-      const raw = window.localStorage.getItem(ACADEMIC_STORAGE_KEY);
+      const raw = presentationMode ? null : window.localStorage.getItem(ACADEMIC_STORAGE_KEY);
       const stored = parseStoredState(raw);
       if (raw && !stored) setRecoveryNotice("Saved dashboard data could not be read.");
       dispatch({ type: "state/load", state: stored ?? EMPTY_STATE });
@@ -77,12 +80,12 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [presentationMode]);
 
   useEffect(() => {
-    if (!isHydrated) return;
+    if (!isHydrated || presentationMode) return;
     window.localStorage.setItem(ACADEMIC_STORAGE_KEY, serializeState(state));
-  }, [isHydrated, state]);
+  }, [isHydrated, presentationMode, state]);
 
   useEffect(() => {
     if (!toastMessage) return;
@@ -95,30 +98,43 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
   const openTask = useCallback((taskId?: string) => setTaskDialog({ isOpen: true, taskId }), []);
   const closeTask = useCallback(() => setTaskDialog({ isOpen: false }), []);
 
-  const syncCanvas = useCallback(async () => {
+  const requestCanvas = useCallback(async (credentials?: { token: string; code: string }) => {
     if (syncInProgress.current) return;
     syncInProgress.current = true;
     setCanvasSync((current) => ({ ...current, busy: true, message: "" }));
     try {
-      const response = await fetch("/api/canvas/sync", { method: "POST", cache: "no-store" });
+      const response = await fetch("/api/canvas/sync", {
+        method: "POST", cache: "no-store",
+        ...(credentials ? {
+          headers: { "Content-Type": "application/json", "x-studyflow-demo-code": credentials.code },
+          body: JSON.stringify({ token: credentials.token }),
+        } : {}),
+      });
       const payload = await response.json();
       if (!response.ok) throw new Error(typeof payload.message === "string" ? payload.message : "Canvas sync failed.");
       if (!isAcademicState(payload.state)) throw new Error("Canvas returned an invalid workspace.");
+      if (credentials) {
+        presentationCredentials.current = credentials;
+        setPresentationCode(credentials.code);
+      }
       dispatch({ type: "canvas/sync", state: payload.state });
       setRecoveryNotice("");
       setCanvasSync({ busy: false, message: "", syncedAt: payload.syncedAt });
     } catch (error) {
       const message = error instanceof Error && !(error instanceof TypeError)
         ? error.message
-        : "Could not reach the local Canvas sync service.";
+        : "Could not reach the Canvas sync service.";
       setCanvasSync((current) => ({ ...current, busy: false, message }));
     } finally {
       syncInProgress.current = false;
     }
   }, []);
 
+  const syncCanvas = useCallback(() => requestCanvas(presentationCredentials.current), [requestCanvas]);
+  const connectCanvas = useCallback((token: string, code: string) => requestCanvas({ token, code }), [requestCanvas]);
+
   useEffect(() => {
-    if (!isHydrated) return;
+    if (!isHydrated || presentationMode) return;
     const initialSync = window.setTimeout(() => { void syncCanvas(); }, 0);
     const timer = window.setInterval(() => {
       if (document.visibilityState === "visible") void syncCanvas();
@@ -127,7 +143,7 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
       window.clearTimeout(initialSync);
       window.clearInterval(timer);
     };
-  }, [isHydrated, syncCanvas]);
+  }, [isHydrated, presentationMode, syncCanvas]);
 
   const addTask = useCallback((draft: TaskDraft) => {
     const changedAt = new Date().toISOString();
@@ -184,6 +200,7 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
       deleteTask,
       canvasSync,
       syncCanvas,
+      presentation: presentationMode ? { code: presentationCode, connect: connectCanvas } : undefined,
       showToast,
       clearToast,
     }),
@@ -202,6 +219,9 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
       deleteTask,
       canvasSync,
       syncCanvas,
+      presentationMode,
+      presentationCode,
+      connectCanvas,
       showToast,
       clearToast,
     ],

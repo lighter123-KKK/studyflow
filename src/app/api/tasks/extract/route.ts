@@ -1,5 +1,5 @@
-import { isLocalPost } from "@/lib/local-request";
-import { IMPORT_DATE_LABELS, IMPORT_MIME, MAX_IMPORT_BYTES, type ImportCandidate, type ImportMime } from "@/lib/task-import";
+import { isDemoPost, isLocalPost } from "@/lib/local-request";
+import { IMPORT_DATE_LABELS, IMPORT_MIME, MAX_IMPORT_BYTES, MAX_PRESENTATION_IMPORT_BYTES, type ImportCandidate, type ImportMime } from "@/lib/task-import";
 import { parseDateOnly } from "@/lib/date";
 
 const instructions = [
@@ -95,18 +95,25 @@ function normalizeCandidate(value: unknown): ImportCandidate | undefined {
 }
 
 export async function POST(request: Request) {
-  if (!isLocalPost(request)) return json({ message: "Open the local StudyFlow address to read files." }, 403);
+  const hosted = Boolean(process.env.STUDYFLOW_DEMO_ORIGIN);
+  if (!(hosted ? isDemoPost(request) : isLocalPost(request))) {
+    return json({ message: hosted ? "Connect Canvas with the presentation access code before importing."
+      : "Open the local StudyFlow address to read files." }, 403);
+  }
   const key = process.env.DEEPSEEK_API_KEY?.trim();
-  if (!key) return json({ message: "Add DEEPSEEK_API_KEY to this copy’s .env.local file and restart StudyFlow." }, 503);
+  if (!key) return json({ message: hosted ? "DeepSeek is missing from the deployment’s server settings."
+    : "Add DEEPSEEK_API_KEY to this copy’s .env.local file and restart StudyFlow." }, 503);
 
-  if (Number(request.headers.get("content-length")) > MAX_IMPORT_BYTES + 16_384) {
-    return json({ message: "The file must be 8 MB or smaller." }, 413);
+  const limit = hosted ? MAX_PRESENTATION_IMPORT_BYTES : MAX_IMPORT_BYTES;
+  const fileTooLarge = `The file must be ${limit / (1024 * 1024)} MB or smaller.`;
+  if (Number(request.headers.get("content-length")) > limit + 16_384) {
+    return json({ message: fileTooLarge }, 413);
   }
 
   const body = await request.formData().catch(() => null);
   const file = body?.get("file");
   if (!(file instanceof File) || !file.size) return json({ message: "Choose a PDF, PNG, JPEG or WebP file." }, 400);
-  if (file.size > MAX_IMPORT_BYTES) return json({ message: "The file must be 8 MB or smaller." }, 413);
+  if (file.size > limit) return json({ message: fileTooLarge }, 413);
 
   try {
     const buffer = await file.arrayBuffer();

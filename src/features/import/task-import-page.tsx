@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { useAcademic } from "@/context/academic-context";
 import {
   EXTERNAL_COURSE, IMPORT_DATE_LABELS, MAX_IMPORT_BYTES, MAX_IMPORT_FILES, findImportMatches,
+  MAX_PRESENTATION_IMPORT_BYTES,
   guessImportCourse, priorityForDate, sameImportSlot, type ImportCandidate,
 } from "@/lib/task-import";
 import type { DateMeaning, TaskDraft } from "@/lib/types";
@@ -18,10 +19,13 @@ interface ReviewItem extends ImportCandidate {
   courseId: string;
 }
 
-async function readFile(file: File) {
+async function readFile(file: File, presentationCode?: string) {
   const body = new FormData();
   body.set("file", file);
-  const response = await fetch("/api/tasks/extract", { method: "POST", body });
+  const response = await fetch("/api/tasks/extract", {
+    method: "POST", body,
+    headers: presentationCode ? { "x-studyflow-demo-code": presentationCode } : undefined,
+  });
   const payload = await response.json().catch(() => null);
   if (!response.ok || !Array.isArray(payload?.items)) {
     throw new Error(typeof payload?.message === "string" ? payload.message : "File recognition failed.");
@@ -30,7 +34,9 @@ async function readFile(file: File) {
 }
 
 export function TaskImportPage() {
-  const { state, importTasks } = useAcademic();
+  const { state, importTasks, presentation } = useAcademic();
+  const maxFileBytes = presentation ? MAX_PRESENTATION_IMPORT_BYTES : MAX_IMPORT_BYTES;
+  const maxFileMegabytes = maxFileBytes / (1024 * 1024);
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -47,7 +53,7 @@ export function TaskImportPage() {
     setItems([]);
     setIssues([]);
     try {
-      const results = await Promise.allSettled(files.map(readFile));
+      const results = await Promise.allSettled(files.map((file) => readFile(file, presentation?.code)));
       const next: ReviewItem[] = [];
       const failures: string[] = [];
       for (const [index, result] of results.entries()) {
@@ -64,9 +70,20 @@ export function TaskImportPage() {
           next.push({ ...item, id: `${index}-${offset}`, filename, courseId, selected });
         }
       }
-      setItems(next);
+      const ready = presentation
+        ? next.filter((item) => item.selected && item.date && item.excerpt && !item.reviewReason)
+        : [];
+      const remaining = next.filter((item) => !ready.includes(item));
+      if (ready.length) {
+        importTasks(ready.map(toDraft));
+        setMessage(`Imported ${ready.length} ${ready.length === 1 ? "item" : "items"}.${
+          remaining.length ? " Review the remaining items." : " Check My Tasks and Calendar."
+        }`);
+      } else if (remaining.length) {
+        setMessage(`Found ${remaining.length} ${remaining.length === 1 ? "item" : "items"}. Review before importing.`);
+      }
+      setItems(remaining);
       setIssues(failures);
-      if (next.length) setMessage(`Found ${next.length} ${next.length === 1 ? "item" : "items"}. Review before importing.`);
     } finally {
       setBusy(false);
     }
@@ -74,6 +91,15 @@ export function TaskImportPage() {
 
   function update(id: string, changes: Partial<ReviewItem>) {
     setItems((current) => current.map((item) => item.id === id ? { ...item, ...changes } : item));
+  }
+
+  function toDraft(item: ReviewItem): TaskDraft {
+    return {
+      title: item.title.trim(), courseId: item.courseId, date: item.date, time: item.time || undefined,
+      dateMeaning: item.dateMeaning, assessmentType: "other", status: "not-started",
+      priority: priorityForDate(item.date, today),
+      importSource: { filename: item.filename, excerpt: item.excerpt },
+    };
   }
 
   function save(event: FormEvent<HTMLFormElement>) {
@@ -85,12 +111,7 @@ export function TaskImportPage() {
     }
     const batch: TaskDraft[] = [];
     for (const item of chosen) {
-      const draft: TaskDraft = {
-        title: item.title.trim(), courseId: item.courseId, date: item.date, time: item.time || undefined,
-        dateMeaning: item.dateMeaning, assessmentType: "other", status: "not-started",
-        priority: priorityForDate(item.date, today),
-        importSource: { filename: item.filename, excerpt: item.excerpt },
-      };
+      const draft = toDraft(item);
       if (![...state.tasks, ...batch].some((existing) => sameImportSlot(existing, draft))) batch.push(draft);
     }
     importTasks(batch);
@@ -114,21 +135,23 @@ export function TaskImportPage() {
                 const next = Array.from(event.currentTarget.files ?? []);
                 setItems([]);
                 setMessage("");
-                if (next.length > MAX_IMPORT_FILES || next.some((file) => !file.size || file.size > MAX_IMPORT_BYTES)) {
+                if (next.length > MAX_IMPORT_FILES || next.some((file) => !file.size || file.size > maxFileBytes)) {
                   setFiles([]);
                   event.currentTarget.value = "";
-                  setIssues(["Select up to six nonempty files, each 8 MB or smaller."]);
+                  setIssues([`Select up to six nonempty files, each ${maxFileMegabytes} MB or smaller.`]);
                   return;
                 }
                 setFiles(next);
                 setIssues([]);
               }} />
             <p className="small text-secondary mt-2 mb-3" id="task-files-help">
-              Up to six PDF, PNG, JPEG or WebP files, 8 MB each. Selected files are sent to DeepSeek when you click Read files.
+              Up to six PDF, PNG, JPEG or WebP files, {maxFileMegabytes} MB each. {presentation
+                ? "Uploads go to DeepSeek. Items with a clear date are added automatically when no duplicate is found."
+                : "Selected files are sent to DeepSeek when you click Read files."}
             </p>
             {files.length ? <ul className="small ps-3">{files.map((file, index) => <li key={index} className="text-break">{file.name}</li>)}</ul> : null}
             <button className="btn btn-primary" type="button" disabled={!files.length || busy} onClick={extract}>
-              <IconFileUpload className="icon" aria-hidden="true" /> {busy ? "Reading files…" : "Read files"}
+              <IconFileUpload className="icon" aria-hidden="true" /> {busy ? "Reading files…" : presentation ? "Upload and update calendar" : "Read files"}
             </button>
           </div>
         </section>

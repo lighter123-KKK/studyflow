@@ -15,7 +15,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" data-bs-theme="light">
       <body>
-        <AcademicProvider>
+        <AcademicProvider presentationMode={Boolean(process.env.STUDYFLOW_DEMO_ORIGIN)}>
           <AppShell>{children}</AppShell>
         </AcademicProvider>
       </body>
