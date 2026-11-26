@@ -9,6 +9,7 @@ import {
   IconClockExclamation,
   IconFileUpload,
   IconHome,
+  IconInfoCircle,
   IconLayoutDashboard,
   IconMenu2,
   IconPlus,
@@ -37,6 +38,7 @@ const navigation: NavigationItem[] = [
   { href: "/import", label: "Upload files", icon: IconFileUpload },
   { href: "/dashboard", label: "Dashboard", icon: IconLayoutDashboard },
   { href: "/deadlines", label: "Deadlines", icon: IconClockExclamation },
+  { href: "/about", label: "About StudyFlow", icon: IconInfoCircle },
 ];
 
 function Navigation({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {

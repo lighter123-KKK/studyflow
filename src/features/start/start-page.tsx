@@ -16,6 +16,7 @@ export function StartPage() {
       <header className="study-start-intro">
         <h1>All your dates in one place</h1>
         <p>Choose how to add an assignment, deadline or event to your planner.</p>
+        <Link className="d-inline-block mt-2" href="/about">What can StudyFlow do?</Link>
       </header>
 
       <section className="study-start-options" aria-label="Ways to add a schedule">
