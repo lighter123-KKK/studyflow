@@ -26,6 +26,7 @@ interface ProjectDetailProps {
   filter: ProjectTaskFilter;
   onFilterChange: (filter: ProjectTaskFilter) => void;
   onUpdateStatus: (task: Task) => void;
+  onEditTask?: (task: Task) => void;
   now: Date;
 }
 
@@ -50,6 +51,7 @@ export function ProjectDetail({
   filter,
   onFilterChange,
   onUpdateStatus,
+  onEditTask,
   now,
 }: ProjectDetailProps) {
   const details = getDemoProjectDetails(project.id);
@@ -218,7 +220,11 @@ export function ProjectDetail({
                       {course?.code ?? project.courseId.toUpperCase()}
                     </div>
                     <h4 className="h3 mb-0" id={`mobile-project-task-${task.id}`}>
-                      {task.title}
+                      {onEditTask && !task.canvasUrl ? (
+                        <button className="btn btn-link p-0 text-start" type="button" onClick={() => onEditTask(task)}>
+                          {task.title}
+                        </button>
+                      ) : task.title}
                     </h4>
                   </div>
                   <div className="d-flex flex-column align-items-end gap-1 flex-shrink-0">
@@ -295,7 +301,13 @@ export function ProjectDetail({
               {presentedTasks.map(({ task, status, owner, needsAttention, recordedAt }) => (
                   <tr key={task.id}>
                     <td>
-                      <div className="fw-semibold">{task.title}</div>
+                      <div className="fw-semibold">
+                        {onEditTask && !task.canvasUrl ? (
+                          <button className="btn btn-link p-0 text-start" type="button" onClick={() => onEditTask(task)}>
+                            {task.title}
+                          </button>
+                        ) : task.title}
+                      </div>
                       {task.blockerReason ? (
                         <div className="small text-danger mt-1">
                           <IconAlertTriangle className="icon me-1" aria-hidden="true" />

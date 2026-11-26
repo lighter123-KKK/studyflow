@@ -1,5 +1,5 @@
-import { DashboardPage } from "@/features/dashboard/dashboard-page";
+import { MyTasksPage } from "@/features/tasks/my-tasks-page";
 
 export default function HomePage() {
-  return <DashboardPage />;
+  return <MyTasksPage />;
 }

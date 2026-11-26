@@ -18,7 +18,7 @@ import {
 } from "@/components/projects/project-utils";
 
 export function ProjectsPage() {
-  const { state, isHydrated, openTask, updateTask, saveProjectMember } = useAcademic();
+  const { state, isHydrated, openTask, openProjectTask, updateTask, saveProjectMember } = useAcademic();
   const [selectedProjectId, setSelectedProjectId] = useState<string>();
   const [filter, setFilter] = useState<ProjectTaskFilter>("all");
   const [editingTask, setEditingTask] = useState<Task>();
@@ -38,7 +38,7 @@ export function ProjectsPage() {
   }
 
   const selectedProject =
-    (state.projects.find((project) => project.id === selectedProjectId) ?? state.projects[0])!;
+    state.projects.find((project) => project.id === selectedProjectId) ?? state.projects[0];
 
   function selectProject(projectId: string) {
     flushSync(() => {
@@ -66,13 +66,15 @@ export function ProjectsPage() {
           eyebrow="Team coordination"
           title="Group Projects"
           description="Review recorded responsibilities, internal deadlines and reported progress across active projects."
-          actions={
-            <button className="btn btn-primary" type="button" onClick={() => openTask()}>
-              <IconPlus className="icon" aria-hidden="true" /> Add task
+          actions={selectedProject ? (
+            <button className="btn btn-primary" type="button"
+              onClick={() => { setFilter("all"); openProjectTask(selectedProject.id); }}>
+              <IconPlus className="icon" aria-hidden="true" /> Add project task
             </button>
-          }
+          ) : undefined}
         />
         <div className="d-flex flex-column gap-4">
+      {state.projects.some((project) => project.canvasUrl) ? (
       <div className="alert alert-info mb-0" role="note">
         <IconInfoCircle className="icon alert-icon" aria-hidden="true" />
         <div>
@@ -83,8 +85,9 @@ export function ProjectsPage() {
           </p>
         </div>
       </div>
+      ) : null}
 
-      {state.projects.length === 0 ? (
+      {!selectedProject ? (
         <div className="card">
           <div className="empty py-5">
             <div className="empty-icon">
@@ -104,7 +107,7 @@ export function ProjectsPage() {
                 <h2 className="h3 mb-1" id="project-overview-title">
                   Project overview
                 </h2>
-                <p className="text-secondary mb-0">Progress is calculated from the shared task list.</p>
+                <p className="text-secondary mb-0">Progress is calculated from the project task list.</p>
               </div>
             </div>
             <div className="row row-cards">
@@ -139,6 +142,7 @@ export function ProjectsPage() {
             filter={filter}
             onFilterChange={setFilter}
             onUpdateStatus={setEditingTask}
+            onEditTask={(task) => openTask(task.id)}
             now={now}
           />
         </>

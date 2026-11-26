@@ -20,8 +20,10 @@ export function academicReducer(state: AcademicState, action: AcademicAction): A
       const incoming = action.state;
       if (state.currentMemberId && state.currentMemberId !== incoming.currentMemberId) return incoming;
       const previousTasks = new Map(state.tasks.map((task) => [task.id, task]));
-      const localTasks = state.tasks.filter((task) => !task.canvasUrl);
       const localProjects = state.projects.filter((project) => !project.canvasUrl);
+      const projectIds = new Set([...localProjects, ...incoming.projects].map((project) => project.id));
+      const localTasks = state.tasks.filter((task) =>
+        !task.canvasUrl && (!task.projectId || projectIds.has(task.projectId)));
       const referencedCourses = new Set([...localTasks, ...localProjects].map((item) => item.courseId));
       const incomingCourses = new Set(incoming.courses.map((course) => course.id));
       return {
@@ -32,7 +34,13 @@ export function academicReducer(state: AcademicState, action: AcademicAction): A
           ...state.courses.filter((course) => referencedCourses.has(course.id) && !incomingCourses.has(course.id)),
         ],
         members: [...incoming.members, ...state.members.filter((member) => !member.id.startsWith("canvas-user-"))],
-        projects: [...incoming.projects, ...localProjects],
+        projects: [
+          ...incoming.projects.map((project) => ({
+            ...project,
+            taskIds: [...new Set([...project.taskIds, ...localTasks.filter((task) => task.projectId === project.id).map((task) => task.id)])],
+          })),
+          ...localProjects,
+        ],
         tasks: [...incoming.tasks.map((task) => {
           const previous = previousTasks.get(task.id);
           if (!previous) return task;
@@ -65,8 +73,18 @@ export function academicReducer(state: AcademicState, action: AcademicAction): A
         ],
       };
     }
-    case "task/add":
-      return { ...state, tasks: [...state.tasks, action.task] };
+    case "task/add": {
+      const { task } = action;
+      return {
+        ...state,
+        courses: task.courseId === EXTERNAL_COURSE.id && !state.courses.some((course) => course.id === EXTERNAL_COURSE.id)
+          ? [...state.courses, EXTERNAL_COURSE] : state.courses,
+        tasks: [...state.tasks, task],
+        projects: task.projectId ? state.projects.map((project) => project.id === task.projectId
+          ? { ...project, taskIds: [...project.taskIds, task.id] }
+          : project) : state.projects,
+      };
+    }
     case "task/import": {
       const tasks = [...state.tasks];
       const knownCourses = new Set(state.courses.map((course) => course.id));

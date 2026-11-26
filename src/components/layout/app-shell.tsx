@@ -29,19 +29,19 @@ interface NavigationItem {
 }
 
 const navigation: NavigationItem[] = [
-  { href: "/", label: "Dashboard", icon: IconLayoutDashboard },
-  { href: "/tasks", label: "My Tasks", icon: IconChecklist },
+  { href: "/", label: "My Tasks", icon: IconChecklist },
   { href: "/calendar", label: "Calendar", icon: IconCalendarMonth },
   { href: "/projects", label: "Group Projects", icon: IconUsersGroup },
+  { href: "/import", label: "Upload files", icon: IconFileUpload },
+  { href: "/dashboard", label: "Dashboard", icon: IconLayoutDashboard },
   { href: "/deadlines", label: "Deadlines", icon: IconClockExclamation },
-  { href: "/import", label: "Import tasks", icon: IconFileUpload },
 ];
 
 function Navigation({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   return (
     <nav className="navbar-nav" aria-label="Primary navigation">
       {navigation.map((item) => {
-        const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        const active = item.href === "/" ? pathname === "/" || pathname === "/tasks" : pathname.startsWith(item.href);
         const Icon = item.icon;
         return (
           <div className="nav-item" key={item.href}>
@@ -65,7 +65,14 @@ function Navigation({ pathname, onNavigate }: { pathname: string; onNavigate?: (
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { state, isHydrated, recoveryNotice, openTask, canvasSync, syncCanvas } = useAcademic();
+  const { state, isHydrated, recoveryNotice, openTask, canvasSync, syncCanvas, presentation } = useAcademic();
+  const [canvasOpen, setCanvasOpen] = useState(false);
+  const canConnectCanvas = presentation && !presentation.connected;
+  const canvasLabel = canvasSync.busy ? "Syncing Canvas…" : canConnectCanvas ? "Connect Canvas" : "Sync Canvas";
+  function handleCanvas() {
+    if (canConnectCanvas) setCanvasOpen((open) => !open);
+    else void syncCanvas();
+  }
   const currentMember = state.members.find((member) => member.id === state.currentMemberId);
   const [mobileOpen, setMobileOpen] = useState(false);
   const mobileDrawerRef = useRef<HTMLElement>(null);
@@ -87,8 +94,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <Navigation pathname={pathname} />
           <div className="mt-auto pt-4">
-            <button type="button" className="btn btn-ghost-light w-100 justify-content-start" disabled={canvasSync.busy} onClick={syncCanvas}>
-              <IconRefresh className="icon me-2" aria-hidden="true" /> {canvasSync.busy ? "Syncing Canvas…" : "Sync Canvas"}
+            <button type="button" className="btn btn-ghost-light w-100 justify-content-start" disabled={canvasSync.busy} onClick={handleCanvas}>
+              <IconRefresh className="icon me-2" aria-hidden="true" /> {canvasLabel}
             </button>
             {currentMember ? (
               <div className="d-flex align-items-center gap-2 mt-3 pt-3 border-top border-white border-opacity-10">
@@ -120,8 +127,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <button ref={mobileCloseRef} className="btn btn-icon btn-ghost-secondary" type="button" aria-label="Close navigation" onClick={() => setMobileOpen(false)}><IconX className="icon" /></button>
             </div>
             <Navigation pathname={pathname} onNavigate={() => setMobileOpen(false)} />
-            <button type="button" className="btn btn-outline-secondary w-100 mt-4" disabled={canvasSync.busy} onClick={() => { void syncCanvas(); setMobileOpen(false); }}>
-              <IconRefresh className="icon me-2" aria-hidden="true" /> Sync Canvas
+            <button type="button" className="btn btn-outline-secondary w-100 mt-4" disabled={canvasSync.busy} onClick={() => { handleCanvas(); setMobileOpen(false); }}>
+              <IconRefresh className="icon me-2" aria-hidden="true" /> {canvasLabel}
             </button>
           </aside>
         </div>
@@ -131,6 +138,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {recoveryNotice ? <div className="container-xl pt-3"><div className="alert alert-warning mb-0" role="alert">{recoveryNotice}</div></div> : null}
         {canvasSync.message ? (
           <div className="container-xl pt-3"><div className="alert alert-warning mb-0" role="status">{canvasSync.message}</div></div>
+        ) : null}
+        {presentation?.connected ? (
+          <div className="container-xl d-flex justify-content-end pt-3">
+            <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => window.location.replace("/")}>End presentation</button>
+          </div>
+        ) : null}
+        {isHydrated && canvasOpen && canConnectCanvas && presentation ? (
+          <section className="container-xl pt-3" aria-label="Connect CityU Canvas">
+            <div className="card" style={{ maxWidth: "36rem" }}>
+              <form className="card-body" autoComplete="off" onSubmit={(event) => {
+                event.preventDefault();
+                const fields = new FormData(event.currentTarget);
+                const token = String(fields.get("token") ?? "").trim();
+                if (token) void presentation.connect(token);
+              }}>
+                <h2 className="h3 mb-1">Connect CityU Canvas</h2>
+                <p className="text-secondary mb-3">Optional. Sync your assignments into this session using your own token.</p>
+                <label className="form-label" htmlFor="presentation-token">Canvas access token</label>
+                <input id="presentation-token" name="token" type="password" className="form-control mb-3"
+                  maxLength={512} required autoComplete="off" spellCheck={false} ref={(input) => { input?.focus(); }} />
+                <div className="d-flex gap-2">
+                  <button type="submit" className="btn btn-primary" disabled={canvasSync.busy}>
+                    {canvasSync.busy ? "Syncing Canvas…" : "Connect and sync"}
+                  </button>
+                  <button type="button" className="btn btn-outline-secondary" onClick={() => setCanvasOpen(false)}>Cancel</button>
+                </div>
+              </form>
+            </div>
+          </section>
         ) : null}
         {isHydrated ? children : <LoadingState />}
       </div>

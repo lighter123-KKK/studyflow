@@ -1,16 +1,24 @@
 import { CanvasRequestError, loadCanvasWorkspace } from "@/lib/canvas-server";
-import { isLocalPost } from "@/lib/local-request";
+import { isPresentationPost, isLocalPost } from "@/lib/local-request";
 
 function json(body: unknown, status = 200) {
   return Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
 }
 
 export async function POST(request: Request) {
-  if (!isLocalPost(request)) {
-    return json({ message: "Open the local StudyFlow address to sync Canvas." }, 403);
+  let token: string | undefined;
+  if (process.env.STUDYFLOW_DEMO_ORIGIN) {
+    if (!isPresentationPost(request)) return json({ message: "Open the StudyFlow website to connect Canvas." }, 403);
+    const supplied = (await request.json().catch(() => null))?.token;
+    if (typeof supplied !== "string" || !/^[!-~]{1,512}$/.test(supplied)) {
+      return json({ message: "Enter your Canvas access token." }, 400);
+    }
+    token = supplied;
+  } else {
+    if (!isLocalPost(request)) return json({ message: "Open the local StudyFlow address to sync Canvas." }, 403);
+    token = process.env.CANVAS_ACCESS_TOKEN?.trim();
+    if (!token) return json({ message: "Set CANVAS_ACCESS_TOKEN in .env.local and restart StudyFlow." }, 503);
   }
-  const token = process.env.CANVAS_ACCESS_TOKEN?.trim();
-  if (!token) return json({ message: "Set CANVAS_ACCESS_TOKEN in .env.local and restart StudyFlow." }, 503);
 
   try {
     return json({ state: await loadCanvasWorkspace(token), syncedAt: new Date().toISOString() });

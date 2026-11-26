@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   IconBolt,
   IconCheck,
   IconClock,
+  IconFileUpload,
   IconPlus,
   IconSparkles,
 } from "@tabler/icons-react";
@@ -20,7 +22,7 @@ type TaskMode = "impact" | "short";
 const DURATIONS = [15, 30, 60, 120] as const;
 
 export function MyTasksPage() {
-  const { state, isHydrated, openTask } = useAcademic();
+  const { state, isHydrated, openTask, presentation } = useAcademic();
   const [mode, setMode] = useState<TaskMode>("impact");
   const [availableMinutes, setAvailableMinutes] = useState<number>(30);
   const [showMissing, setShowMissing] = useState(false);
@@ -63,17 +65,26 @@ export function MyTasksPage() {
               <div className="page-pretitle">Plan your study time</div>
               <h1 className="page-title">My Tasks</h1>
               <div className="text-secondary mt-1">
-                Personal tasks and group work assigned to you, in one list.
+                Course deadlines, personal schedules and tasks in one place.
               </div>
             </div>
-            <div className="col-auto ms-auto">
+            <div className="col-auto ms-auto d-flex flex-wrap gap-2">
               <button type="button" className="btn btn-primary" onClick={() => openTask()}>
                 <IconPlus size={18} />
                 Add task
               </button>
+              <Link className="btn btn-outline-primary" href="/import">
+                <IconFileUpload size={18} />
+                Upload files
+              </Link>
             </div>
           </div>
         </div>
+        {presentation ? (
+          <p className="text-secondary mt-n2 mb-3">
+            Two sample tasks are included. Edit them, add your own, or see them in the <Link href="/calendar">calendar</Link>.
+          </p>
+        ) : null}
 
         <div className="card">
           <div className="card-header">

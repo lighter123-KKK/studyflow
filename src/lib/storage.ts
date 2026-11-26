@@ -168,7 +168,8 @@ export function isAcademicState(value: unknown): value is AcademicState {
       (task) =>
         courseIds.has(task.courseId) &&
         (task.projectId === undefined || projectIds.has(task.projectId)) &&
-        (task.assignedTo === undefined || memberIds.has(task.assignedTo)),
+        (task.assignedTo === undefined || memberIds.has(task.assignedTo) ||
+          projectMemberProfiles?.some((profile) => profile.id === task.assignedTo && profile.projectId === task.projectId)),
     ) &&
     projects.every(
       (project) =>

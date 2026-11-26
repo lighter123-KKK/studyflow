@@ -11,7 +11,9 @@ import {
 } from "@tabler/icons-react";
 import { useAcademic } from "@/context/academic-context";
 import { parseDateOnly } from "@/lib/date";
-import type { Task } from "@/lib/types";
+import { EXTERNAL_COURSE } from "@/lib/task-import";
+import type { GroupProject, Task } from "@/lib/types";
+import { getProjectTeam } from "@/components/projects/project-utils";
 import {
   validateTaskForm,
   type TaskFormErrors,
@@ -52,10 +54,12 @@ export function TaskModal() {
   const existing = taskDialog.taskId
     ? state.tasks.find((task) => task.id === taskDialog.taskId)
     : undefined;
-  return <TaskModalContent key={taskDialog.taskId ?? "new-task"} existing={existing} />;
+  const projectId = existing?.projectId ?? taskDialog.projectId;
+  const project = state.projects.find((item) => item.id === projectId);
+  return <TaskModalContent key={taskDialog.taskId ?? project?.id ?? "new-task"} existing={existing} project={project} />;
 }
 
-function TaskModalContent({ existing }: { existing?: Task }) {
+function TaskModalContent({ existing, project }: { existing?: Task; project?: GroupProject }) {
   const {
     state,
     closeTask,
@@ -63,13 +67,27 @@ function TaskModalContent({ existing }: { existing?: Task }) {
     updateTask,
     deleteTask,
     showToast,
+    presentation,
   } = useAcademic();
-  const [values, setValues] = useState<TaskFormValues>(() => taskToFormValues(existing));
+  const [values, setValues] = useState<TaskFormValues>(() => {
+    const initial = taskToFormValues(existing);
+    if (existing || (!project && !presentation && state.courses.length)) return initial;
+    return {
+      ...initial,
+      courseId: project?.courseId ?? EXTERNAL_COURSE.id,
+      assessmentType: project ? "assignment" : "other",
+      dateMeaning: project ? "submission-deadline" : "date-to-remember",
+    };
+  });
+  const [assignedTo, setAssignedTo] = useState(existing?.assignedTo ?? "");
   const [errors, setErrors] = useState<TaskFormErrors>({});
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const fromCanvas = Boolean(existing?.canvasUrl);
-  const editsInternalDeadline = !fromCanvas && Boolean(existing?.projectId || existing?.internalDueDate);
+  const editsInternalDeadline = !fromCanvas && Boolean(project || existing?.projectId || existing?.internalDueDate);
+  const courses = state.courses.some((course) => course.id === EXTERNAL_COURSE.id)
+    ? state.courses
+    : [...state.courses, EXTERNAL_COURSE];
   const startingPriority = useRef(values.priority);
   const titleRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -133,6 +151,11 @@ function TaskModalContent({ existing }: { existing?: Task }) {
     }
 
     const draft = buildTaskDraft(values, existing);
+    if (project && !fromCanvas) {
+      draft.projectId = project.id;
+      draft.internalDueDate = values.date;
+      draft.assignedTo = assignedTo || undefined;
+    }
     if (existing?.canvasUrl) {
       updateTask(existing.id, {
         estimatedMinutes: draft.estimatedMinutes,
@@ -190,7 +213,7 @@ function TaskModalContent({ existing }: { existing?: Task }) {
           <div className="modal-header">
             <div>
               <h2 className="modal-title" id={`${idPrefix}-title`}>
-                {existing ? "Edit academic task" : "Add academic task"}
+                {existing ? "Edit academic task" : project ? "Add project task" : "Add academic task"}
               </h2>
               <div className="text-secondary small mt-1">
                 Required fields are marked with an asterisk.
@@ -201,9 +224,9 @@ function TaskModalContent({ existing }: { existing?: Task }) {
 
           <form onSubmit={handleSubmit} noValidate>
             <div className="modal-body">
-              {existing?.projectId ? (
+              {project ? (
                 <div className="alert alert-info" role="note">
-                  This task belongs to a group project. Project assignment details remain unchanged.
+                  Project · {project.name}
                 </div>
               ) : null}
 
@@ -243,7 +266,7 @@ function TaskModalContent({ existing }: { existing?: Task }) {
                   </label>
                   <select
                     id={`${idPrefix}-courseId`}
-                    disabled={fromCanvas}
+                    disabled={fromCanvas || Boolean(project)}
                     className={selectClass("courseId")}
                     value={values.courseId}
                     onChange={(event) => updateValue("courseId", event.target.value)}
@@ -251,7 +274,7 @@ function TaskModalContent({ existing }: { existing?: Task }) {
                     aria-invalid={Boolean(errors.courseId)}
                   >
                     <option value="">Select a course</option>
-                    {state.courses.map((course) => (
+                    {courses.map((course) => (
                       <option key={course.id} value={course.id}>
                         {course.code} — {course.name}
                       </option>
@@ -259,6 +282,19 @@ function TaskModalContent({ existing }: { existing?: Task }) {
                   </select>
                   <InvalidFeedback error={errors.courseId} id={errorId("courseId", idPrefix)} />
                 </div>
+
+                {project && !fromCanvas ? (
+                  <div className="col-md-6">
+                    <label className="form-label" htmlFor={`${idPrefix}-assignee`}>Assigned to</label>
+                    <select className="form-select" id={`${idPrefix}-assignee`} value={assignedTo}
+                      onChange={(event) => setAssignedTo(event.target.value)}>
+                      <option value="">Unassigned</option>
+                      {getProjectTeam(state, project).map((member) => (
+                        <option key={member.id} value={member.id}>{member.displayName}</option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
 
                 <div className="col-md-6">
                   <label className="form-label required" htmlFor={`${idPrefix}-assessmentType`}>

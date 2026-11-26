@@ -32,6 +32,7 @@ describe("DashboardPage", () => {
       taskDialog: { isOpen: false },
       toastMessage: "",
       openTask,
+      openProjectTask: vi.fn(),
       closeTask: vi.fn(),
       addTask: vi.fn(),
       importTasks: vi.fn(),

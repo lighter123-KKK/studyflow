@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import { ACADEMIC_STORAGE_KEY, isAcademicState, parseStoredState, serializeState } from "@/lib/storage";
+import { createPresentationData } from "@/lib/demo-data";
 import { STORAGE_VERSION, type AcademicState, type ProjectMemberProfile, type Task, type TaskDraft } from "@/lib/types";
 import { academicReducer } from "./academic-reducer";
 
@@ -27,6 +28,7 @@ const EMPTY_STATE: AcademicState = {
 interface TaskDialogState {
   isOpen: boolean;
   taskId?: string;
+  projectId?: string;
 }
 
 interface AcademicContextValue {
@@ -36,6 +38,7 @@ interface AcademicContextValue {
   taskDialog: TaskDialogState;
   toastMessage: string;
   openTask: (taskId?: string) => void;
+  openProjectTask: (projectId: string) => void;
   closeTask: () => void;
   addTask: (draft: TaskDraft) => Task;
   importTasks: (drafts: TaskDraft[]) => void;
@@ -44,6 +47,7 @@ interface AcademicContextValue {
   deleteTask: (id: string) => void;
   canvasSync: { busy: boolean; message: string; syncedAt?: string };
   syncCanvas: () => Promise<void>;
+  presentation?: { connected: boolean; publicImport: boolean; connect: (token: string) => Promise<void> };
   showToast: (message: string) => void;
   clearToast: () => void;
 }
@@ -55,7 +59,11 @@ function uniqueId(): string {
   return `task-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-export function AcademicProvider({ children }: { children: ReactNode }) {
+export function AcademicProvider({ children, presentationMode = false, publicImport = false }: {
+  children: ReactNode;
+  presentationMode?: boolean;
+  publicImport?: boolean;
+}) {
   const [state, dispatch] = useReducer(academicReducer, EMPTY_STATE);
   const [isHydrated, setIsHydrated] = useState(false);
   const [recoveryNotice, setRecoveryNotice] = useState("");
@@ -63,26 +71,28 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
   const [toastMessage, setToastMessage] = useState("");
   const [canvasSync, setCanvasSync] = useState<AcademicContextValue["canvasSync"]>({ busy: false, message: "" });
   const syncInProgress = useRef(false);
+  const presentationToken = useRef<string | undefined>(undefined);
+  const [canvasConnected, setCanvasConnected] = useState(false);
 
   useEffect(() => {
     let active = true;
     queueMicrotask(() => {
       if (!active) return;
-      const raw = window.localStorage.getItem(ACADEMIC_STORAGE_KEY);
+      const raw = presentationMode ? null : window.localStorage.getItem(ACADEMIC_STORAGE_KEY);
       const stored = parseStoredState(raw);
       if (raw && !stored) setRecoveryNotice("Saved dashboard data could not be read.");
-      dispatch({ type: "state/load", state: stored ?? EMPTY_STATE });
+      dispatch({ type: "state/load", state: presentationMode ? createPresentationData() : stored ?? EMPTY_STATE });
       setIsHydrated(true);
     });
     return () => {
       active = false;
     };
-  }, []);
+  }, [presentationMode]);
 
   useEffect(() => {
-    if (!isHydrated) return;
+    if (!isHydrated || presentationMode) return;
     window.localStorage.setItem(ACADEMIC_STORAGE_KEY, serializeState(state));
-  }, [isHydrated, state]);
+  }, [isHydrated, presentationMode, state]);
 
   useEffect(() => {
     if (!toastMessage) return;
@@ -93,32 +103,45 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
   const showToast = useCallback((message: string) => setToastMessage(message), []);
   const clearToast = useCallback(() => setToastMessage(""), []);
   const openTask = useCallback((taskId?: string) => setTaskDialog({ isOpen: true, taskId }), []);
+  const openProjectTask = useCallback((projectId: string) => setTaskDialog({ isOpen: true, projectId }), []);
   const closeTask = useCallback(() => setTaskDialog({ isOpen: false }), []);
 
-  const syncCanvas = useCallback(async () => {
+  const requestCanvas = useCallback(async (token?: string) => {
     if (syncInProgress.current) return;
     syncInProgress.current = true;
     setCanvasSync((current) => ({ ...current, busy: true, message: "" }));
     try {
-      const response = await fetch("/api/canvas/sync", { method: "POST", cache: "no-store" });
+      const response = await fetch("/api/canvas/sync", {
+        method: "POST", cache: "no-store",
+        ...(token ? {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        } : {}),
+      });
       const payload = await response.json();
       if (!response.ok) throw new Error(typeof payload.message === "string" ? payload.message : "Canvas sync failed.");
       if (!isAcademicState(payload.state)) throw new Error("Canvas returned an invalid workspace.");
+      if (token) {
+        presentationToken.current = token;
+        setCanvasConnected(true);
+      }
       dispatch({ type: "canvas/sync", state: payload.state });
       setRecoveryNotice("");
       setCanvasSync({ busy: false, message: "", syncedAt: payload.syncedAt });
     } catch (error) {
       const message = error instanceof Error && !(error instanceof TypeError)
         ? error.message
-        : "Could not reach the local Canvas sync service.";
+        : "Could not reach the Canvas sync service.";
       setCanvasSync((current) => ({ ...current, busy: false, message }));
     } finally {
       syncInProgress.current = false;
     }
   }, []);
 
+  const syncCanvas = useCallback(() => requestCanvas(presentationToken.current), [requestCanvas]);
+
   useEffect(() => {
-    if (!isHydrated) return;
+    if (!isHydrated || presentationMode) return;
     const initialSync = window.setTimeout(() => { void syncCanvas(); }, 0);
     const timer = window.setInterval(() => {
       if (document.visibilityState === "visible") void syncCanvas();
@@ -127,7 +150,7 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
       window.clearTimeout(initialSync);
       window.clearInterval(timer);
     };
-  }, [isHydrated, syncCanvas]);
+  }, [isHydrated, presentationMode, syncCanvas]);
 
   const addTask = useCallback((draft: TaskDraft) => {
     const changedAt = new Date().toISOString();
@@ -176,6 +199,7 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
       taskDialog,
       toastMessage,
       openTask,
+      openProjectTask,
       closeTask,
       addTask,
       importTasks,
@@ -184,6 +208,7 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
       deleteTask,
       canvasSync,
       syncCanvas,
+      presentation: presentationMode ? { connected: canvasConnected, publicImport, connect: requestCanvas } : undefined,
       showToast,
       clearToast,
     }),
@@ -194,6 +219,7 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
       taskDialog,
       toastMessage,
       openTask,
+      openProjectTask,
       closeTask,
       addTask,
       importTasks,
@@ -202,6 +228,10 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
       deleteTask,
       canvasSync,
       syncCanvas,
+      presentationMode,
+      canvasConnected,
+      publicImport,
+      requestCanvas,
       showToast,
       clearToast,
     ],
