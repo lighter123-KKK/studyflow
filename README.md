@@ -1,5 +1,9 @@
 # StudyFlow → [OPEN THE WEBSITE](https://studyflow-presentation.vercel.app/)
 
+## Updated demo video → [WATCH ON YOUTUBE](https://youtu.be/gDAhv50jSAU?si=O6cCnfU1Pk6b_eBI)
+
+**Please ignore the demo video linked in the report and PowerPoint slides. Watch this updated demo video.**
+
 **StudyFlow puts the dates from your classes and everyday life in one place. You can sync your CityU Canvas deadlines, add a date by hand, or upload a file. Got dates in a WhatsApp screenshot, an email attachment, or a photo of a noticeboard? Upload the file and StudyFlow can pick out several deadlines and events at once. That saves you from typing them one by one and lets you manage them all in one task list and calendar.**
 
 The standard way to add a personal event in Canvas is to fill in an event form. StudyFlow adds the option to read dates directly from your files. [Canvas personal calendar guide](https://community.instructure.com/en/kb/articles/662788-how-do-i-add-an-event-to-my-personal-calendar)
