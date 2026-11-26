@@ -56,10 +56,15 @@ export function TaskModal() {
     : undefined;
   const projectId = existing?.projectId ?? taskDialog.projectId;
   const project = state.projects.find((item) => item.id === projectId);
-  return <TaskModalContent key={taskDialog.taskId ?? project?.id ?? "new-task"} existing={existing} project={project} />;
+  return <TaskModalContent key={taskDialog.taskId ?? project?.id ?? "new-task"} existing={existing}
+    project={project} afterCreate={taskDialog.afterCreate} />;
 }
 
-function TaskModalContent({ existing, project }: { existing?: Task; project?: GroupProject }) {
+function TaskModalContent({ existing, project, afterCreate }: {
+  existing?: Task;
+  project?: GroupProject;
+  afterCreate?: () => void;
+}) {
   const {
     state,
     closeTask,
@@ -171,6 +176,7 @@ function TaskModalContent({ existing, project }: { existing?: Task; project?: Gr
       showToast(confirmation(draft));
     }
     closeTask();
+    if (!existing) afterCreate?.();
   };
 
   const handleDialogKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {

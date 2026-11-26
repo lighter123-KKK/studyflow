@@ -1,13 +1,11 @@
 # StudyFlow → [OPEN THE WEBSITE](https://studyflow-presentation.vercel.app/)
 
-Ever had to look in Canvas, a group chat, and a PDF just to figure out what’s due this week? StudyFlow brings those dates together in **one task list and calendar**. Upload a screenshot, photo, or PDF to pick out dates and deadlines without typing them one by one. You can also add dates yourself or connect CityU Canvas to bring in your course deadlines.
+StudyFlow brings deadlines and events from Canvas, PDFs, photos and group chats into **one task list and calendar**. You can start right away without signing in to StudyFlow.
 
-**Open the website and start with two editable sample tasks. No sign-in is needed.**
+1. **Upload files.** Choose a PDF, PNG, JPG/JPEG or WebP. You can upload up to **6 files at once, 4 MB each, 24 MB total**. StudyFlow finds dates so you can add them without typing them one by one. [Try the sample poster](docs/hackathon-import-test.png). The site allows up to 20 file reads per IP address each hour.
+2. **Add schedule.** Type a name, pick a date and select **Save task**. The new item appears in **My Tasks** and **Calendar**.
+3. **Connect Canvas (optional).** To bring in your latest CityU Canvas assignments, select **Connect Canvas** and paste your own access token. The page shows you where to get one.
 
-1. **My Tasks** — Edit a sample or select **Add task** to enter a deadline or event.
-2. **Upload files** — Add dates from your own file, then see them in **Calendar**. [Download a sample poster](docs/hackathon-import-test.png). The site allows up to 20 file reads per IP address each hour.
-3. **Group Projects** — Open the sample project to edit a task, update its progress, or add a project task.
-
-Already use CityU Canvas? Choose **Connect Canvas** from the menu when you want to sync your own courses.
+Just looking? Open **My Tasks** to try two editable examples, **Calendar** to see your dates, or **Group Projects** to try a sample team project.
 
 EE4213 Human–Computer Interaction · Group 19

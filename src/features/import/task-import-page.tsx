@@ -6,7 +6,7 @@ import { useState, type FormEvent } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { useAcademic } from "@/context/academic-context";
 import {
-  EXTERNAL_COURSE, IMPORT_DATE_LABELS, MAX_IMPORT_BYTES, MAX_IMPORT_FILES, findImportMatches,
+  EXTERNAL_COURSE, IMPORT_ACCEPT, IMPORT_DATE_LABELS, IMPORT_FORMATS_LABEL, MAX_IMPORT_BYTES, MAX_IMPORT_FILES, findImportMatches,
   MAX_PRESENTATION_IMPORT_BYTES,
   guessImportCourse, priorityForDate, sameImportSlot, type ImportCandidate,
 } from "@/lib/task-import";
@@ -132,7 +132,7 @@ export function TaskImportPage() {
         <section className="card mb-4" aria-labelledby="choose-import-files">
           <div className="card-body">
             <label id="choose-import-files" className="form-label" htmlFor="task-files">Choose files</label>
-            <input id="task-files" className="form-control" type="file" multiple accept=".pdf,.png,.jpeg,.jpg,.webp"
+            <input id="task-files" className="form-control" type="file" multiple accept={IMPORT_ACCEPT}
               disabled={busy} aria-describedby="task-files-help"
               onChange={(event) => {
                 const next = Array.from(event.currentTarget.files ?? []);
@@ -141,17 +141,19 @@ export function TaskImportPage() {
                 if (next.length > MAX_IMPORT_FILES || next.some((file) => !file.size || file.size > maxFileBytes)) {
                   setFiles([]);
                   event.currentTarget.value = "";
-                  setIssues([`Select up to six nonempty files, each ${maxFileMegabytes} MB or smaller.`]);
+                  setIssues([`Choose up to ${MAX_IMPORT_FILES} nonempty files. Each file must be ${maxFileMegabytes} MB or smaller.`]);
                   return;
                 }
                 setFiles(next);
                 setIssues([]);
               }} />
             <p className="small text-secondary mt-2 mb-3" id="task-files-help">
-              Up to six PDF, PNG, JPEG or WebP files, {maxFileMegabytes} MB each. {presentation
-                ? "Uploads go to DeepSeek. Items with a clear date are added automatically when no duplicate is found."
-                : "Selected files are sent to DeepSeek when you click Read files."}
+              <strong>{IMPORT_FORMATS_LABEL}.</strong>{" "}
+              Up to {MAX_IMPORT_FILES} files at once, {maxFileMegabytes} MB per file and {maxFileMegabytes * MAX_IMPORT_FILES} MB total.
             </p>
+            <p className="small text-secondary">{presentation
+              ? "Uploads go to DeepSeek. Clear dates are added automatically. You can check any uncertain dates before adding them."
+              : "Selected files are sent to DeepSeek when you click Read files."}</p>
             {presentation?.publicImport ? (
               <p className="small text-secondary">Up to 20 file reads per IP address each hour.</p>
             ) : null}
