@@ -29,6 +29,7 @@ interface TaskDialogState {
   isOpen: boolean;
   taskId?: string;
   projectId?: string;
+  afterCreate?: () => void;
 }
 
 interface AcademicContextValue {
@@ -37,7 +38,7 @@ interface AcademicContextValue {
   recoveryNotice: string;
   taskDialog: TaskDialogState;
   toastMessage: string;
-  openTask: (taskId?: string) => void;
+  openTask: (taskId?: string, afterCreate?: () => void) => void;
   openProjectTask: (projectId: string) => void;
   closeTask: () => void;
   addTask: (draft: TaskDraft) => Task;
@@ -102,7 +103,8 @@ export function AcademicProvider({ children, presentationMode = false, publicImp
 
   const showToast = useCallback((message: string) => setToastMessage(message), []);
   const clearToast = useCallback(() => setToastMessage(""), []);
-  const openTask = useCallback((taskId?: string) => setTaskDialog({ isOpen: true, taskId }), []);
+  const openTask = useCallback((taskId?: string, afterCreate?: () => void) =>
+    setTaskDialog({ isOpen: true, taskId, afterCreate }), []);
   const openProjectTask = useCallback((projectId: string) => setTaskDialog({ isOpen: true, projectId }), []);
   const closeTask = useCallback(() => setTaskDialog({ isOpen: false }), []);
 

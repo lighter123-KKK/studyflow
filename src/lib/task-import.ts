@@ -5,6 +5,8 @@ import type { Course, DateMeaning, Priority, Task } from "./types";
 export const MAX_IMPORT_FILES = 6;
 export const MAX_IMPORT_BYTES = 8 * 1024 * 1024;
 export const MAX_PRESENTATION_IMPORT_BYTES = 4 * 1024 * 1024;
+export const IMPORT_FORMATS_LABEL = "PDF, PNG, JPG/JPEG or WebP";
+export const IMPORT_ACCEPT = ".pdf,.png,.jpg,.jpeg,.webp";
 export const IMPORT_MIME = ["application/pdf", "image/png", "image/jpeg", "image/webp"] as const;
 export type ImportMime = typeof IMPORT_MIME[number];
 

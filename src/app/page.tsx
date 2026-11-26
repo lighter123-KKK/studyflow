@@ -1,5 +1,5 @@
-import { MyTasksPage } from "@/features/tasks/my-tasks-page";
+import { StartPage } from "@/features/start/start-page";
 
 export default function HomePage() {
-  return <MyTasksPage />;
+  return <StartPage />;
 }

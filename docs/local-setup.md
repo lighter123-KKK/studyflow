@@ -86,7 +86,7 @@ Import this repository as a Next.js project in Vercel. Use Node.js 24.x and enab
 | `STUDYFLOW_PUBLIC_IMPORT` | Set to `1` after enabling Vercel Firewall rate limiting on `POST /api/tasks/extract` |
 | `DEEPSEEK_API_KEY` | Your DeepSeek API key |
 
-Redeploy after setting the variables. Visitors open My Tasks with sample data. To sync their personal assignments, they can select **Connect Canvas** and enter their own token. Uploaded files are parsed on the server. Clear, nonduplicate dates are added automatically. Files are limited to 4 MB each on the hosted version. A refresh starts a new hosted session.
+Redeploy after setting the variables. The Start page offers **Upload files**, **Add schedule**, and **Connect Canvas**. **My Tasks** includes two sample tasks. Visitors can connect Canvas with their own token. Uploaded files are parsed on the server. Clear, nonduplicate dates are added automatically. The hosted version allows up to six files per batch, 4 MB per file. A refresh starts a new hosted session.
 
 ## Developer checks
 

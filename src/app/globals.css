@@ -92,6 +92,98 @@ textarea {
   margin-left: var(--study-sidebar-width);
 }
 
+.study-start {
+  max-width: 76rem;
+  padding-top: clamp(1.25rem, 4vw, 3.5rem);
+  padding-bottom: 2rem;
+}
+
+.study-start-intro {
+  padding: clamp(1.4rem, 4vw, 2.75rem);
+  border: 1px solid #dbe7f6;
+  border-radius: 1rem;
+  background: linear-gradient(110deg, #fff, #edf5ff);
+}
+
+.study-start-intro h1 {
+  margin: 0 0 0.5rem;
+  color: #142f4f;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+}
+
+.study-start-intro p {
+  margin: 0;
+  color: #45566e;
+  font-size: clamp(1rem, 1.8vw, 1.15rem);
+}
+
+.study-start-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.study-start-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: clamp(1.15rem, 2vw, 1.5rem);
+  border: 1px solid #dce4ef;
+  border-radius: 0.85rem;
+  background: #fff;
+}
+
+.study-start-card h2 {
+  margin: 0.875rem 0 0.4rem;
+  color: #182f49;
+  font-size: 1.18rem;
+}
+
+.study-start-card p {
+  margin: 0 0 1rem;
+  color: #45566e;
+  line-height: 1.5;
+}
+
+.study-start-card .study-start-formats {
+  display: grid;
+  gap: 0.2rem;
+  width: 100%;
+  padding: 0.65rem 0.8rem;
+  border-radius: 0.55rem;
+  background: #f2f6fc;
+  color: #263b55;
+  font-size: 0.83rem;
+}
+
+.study-start-action {
+  justify-content: space-between;
+  width: 100%;
+  min-height: 2.75rem;
+  margin-top: auto;
+}
+
+.study-start-planner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 0.25rem;
+}
+
+.study-start-planner p {
+  margin: 0;
+  color: #45566e;
+}
+
+.study-connect-card {
+  max-width: 40rem;
+}
+
 .study-mobile-header {
   position: sticky;
   top: 0;
