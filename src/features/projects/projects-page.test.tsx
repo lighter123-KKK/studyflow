@@ -4,8 +4,22 @@ import { AcademicProvider } from "@/context/academic-context";
 import { createDemoData } from "@/lib/demo-data";
 import { ACADEMIC_STORAGE_KEY, serializeState } from "@/lib/storage";
 import { ProjectsPage } from "./projects-page";
+import { TaskModal } from "@/components/tasks/task-modal";
 
 describe("ProjectsPage", () => {
+  it("lets a guest add and edit a task in the sample project", async () => {
+    render(<AcademicProvider presentationMode><ProjectsPage /><TaskModal /></AcademicProvider>);
+    const project = await screen.findByRole("region", { name: "Student Academic Dashboard (sample)" });
+    fireEvent.click(screen.getByRole("button", { name: "Add project task" }));
+    const dialog = screen.getByRole("dialog", { name: "Add project task" });
+    fireEvent.change(within(dialog).getByLabelText("Task title"), { target: { value: "Prepare the demo" } });
+    fireEvent.change(within(dialog).getByLabelText("Internal deadline"), { target: { value: "2026-12-01" } });
+    fireEvent.change(within(dialog).getByLabelText("Assigned to"), { target: { value: "member-maya" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save task" }));
+    fireEvent.click(within(project).getAllByRole("button", { name: "Prepare the demo" })[0]!);
+    expect(screen.getByLabelText("Assigned to")).toHaveValue("member-maya");
+    expect(screen.getByLabelText("Internal deadline")).toHaveValue("2026-12-01");
+  });
   beforeEach(() => localStorage.setItem(ACADEMIC_STORAGE_KEY, serializeState(createDemoData())));
   afterEach(cleanup);
 
@@ -17,7 +31,7 @@ describe("ProjectsPage", () => {
     );
 
     expect(await screen.findByRole("heading", { level: 1, name: "Group Projects" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Add task" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Add project task" })).toBeVisible();
   });
 
   it("keeps the actions header in normal table flow for mobile overflow containment", async () => {

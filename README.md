@@ -1,99 +1,13 @@
-# StudyFlow — Local Setup and User Guide
+# StudyFlow → [OPEN THE WEBSITE](https://studyflow-presentation.vercel.app/)
 
-StudyFlow combines read-only CityU Canvas assignments with tasks and events extracted from documents and images. This is a single-account prototype for local use. A fresh installation starts with an empty workspace.
+Ever had to look in Canvas, a group chat, and a PDF just to figure out what’s due this week? StudyFlow brings those dates together in **one task list and calendar**. Upload a screenshot, photo, or PDF to pick out dates and deadlines without typing them one by one. You can also add dates yourself or connect CityU Canvas to bring in your course deadlines.
 
-## 1. Download and install
+**Open the website and start with two editable sample tasks. No sign-in is needed.**
 
-Install Git and Node.js 24.15 or later in the Node.js 24 release line. Open PowerShell and run the following commands, replacing `OWNER/REPOSITORY` with the path shown on the repository's GitHub page.
+1. **My Tasks** — Edit a sample or select **Add task** to enter a deadline or event.
+2. **Upload files** — Add dates from your own file, then see them in **Calendar**. [Download a sample poster](docs/hackathon-import-test.png). The site allows up to 20 file reads per IP address each hour.
+3. **Group Projects** — Open the sample project to edit a task, update its progress, or add a project task.
 
-```powershell
-git clone https://github.com/OWNER/REPOSITORY.git StudyFlow
-cd StudyFlow
-npm ci
-```
+Already use CityU Canvas? Choose **Connect Canvas** from the menu when you want to sync your own courses.
 
-If you downloaded the ZIP instead, extract it and open PowerShell in the folder containing `package.json`. Run `npm ci` from there.
-
-## 2. Configure your own credentials
-
-Copy the empty configuration template and open the local copy. If `.env.local` already exists, open it directly.
-
-```powershell
-if (!(Test-Path .env.local)) { Copy-Item .env.example .env.local }
-notepad .env.local
-```
-
-```dotenv
-CANVAS_ACCESS_TOKEN=
-DEEPSEEK_API_KEY=
-```
-
-- **Canvas.** Sign in at [CityU Canvas](https://canvas.cityu.edu.hk/), open **Account → Settings → New Access Token**, and generate a short-lived token for personal testing. Paste it after `CANVAS_ACCESS_TOKEN=` on the same line.
-- **DeepSeek.** Create an API key in the [DeepSeek platform](https://platform.deepseek.com/). Paste it after `DEEPSEEK_API_KEY=` on the same line.
-
-Each credential enables its own feature. You can leave the other entry blank. Save the file before starting StudyFlow and restart the server after any configuration change. The repository contains only the empty `.env.example` template. Keep `.env.local` and any recordings showing it off GitHub. Run this single-account prototype on the local address below.
-
-## 3. Start StudyFlow
-
-```powershell
-npm run dev
-```
-
-Keep PowerShell open and visit [http://127.0.0.1:3001](http://127.0.0.1:3001). To use a production build, stop the development server with **Ctrl+C**, then run `npm run build` followed by `npm run start`.
-
-## 4. Sync Canvas assignments
-
-- The first sync runs when StudyFlow opens. Use **Sync Canvas** to refresh manually. StudyFlow also checks every five minutes while its page is visible.
-- Open **My Tasks**, **Deadlines**, or **Calendar** to find imported assignments. **Group Projects** shows group assignments and any team roster that Canvas exposes to your account. Dashboard shows weekly deadline counts.
-- In **Group Projects**, open **View project details** and choose **Add member**, or expand a member and choose **Edit member**. Set a project role, optional email, and responsibilities. Selecting **Group leader** transfers the leadership role within that project. These changes stay in the current browser and are retained when the same Canvas account syncs again.
-- Canvas supplies assignment dates and submission status. StudyFlow calculates initial priorities from dates. Manual priorities, effort estimates, and notes are retained in the current browser. Undated assignments appear in My Tasks, and deadlines are shown in Hong Kong time. The browser retains the last successful snapshot if a refresh fails.
-
-## 5. Import tasks from documents or photos
-
-1. Open **Import tasks** and choose up to six PDF, PNG, JPEG, or WebP files, up to 8 MB each.
-2. Select **Read files**. StudyFlow sends these files to DeepSeek. Flash reads images directly. For PDFs, DeepSeek OCR extracts the text and Flash identifies tasks and dates from that text.
-3. Review the proposed titles, dates, times, date types, and source excerpts. Correct uncertain fields and decide what to do with possible duplicates.
-4. Select **Import selected**. Confirmed items appear in **My Tasks** and **Calendar**, and StudyFlow assigns their initial priorities. Files are processed for extraction. The browser stores the confirmed task details and source excerpts.
-
-Try the fictional [Harbour Code Hackathon poster](docs/hackathon-import-test.png). The expected entries are:
-
-| Item | Hong Kong time | Date type |
-| --- | --- | --- |
-| Registration deadline | 25 Nov 2026, 18:00 | Deadline |
-| Kickoff | 5 Dec 2026, 09:30 | Scheduled event |
-| Prototype submission | 6 Dec 2026, 16:00 | Deadline |
-
-Open November and December 2026 in **Calendar** to see all three entries. The venue and team size should remain background information.
-
-## Troubleshooting
-
-| Symptom | What to check |
-| --- | --- |
-| Canvas workspace is empty | Confirm that the CityU Canvas token is present on the same line as its variable in `.env.local`. Restart StudyFlow, then select **Sync Canvas**. Check the page for an API error. |
-| Read files asks for a key | Confirm `DEEPSEEK_API_KEY` is set in the same folder as `package.json`, then restart StudyFlow. |
-| DeepSeek rejects the request | Check the key and the API account balance. If only one file fails, retry with that file by itself or with a smaller version. |
-| Recognized items do not appear in the planner | Check which rows were selected, then select **Import selected**. Navigate to the month shown in the preview. |
-| Port 3001 is in use | Stop the previous StudyFlow process, then try again. |
-
-## Hosted presentation
-
-Import this repository as a Next.js project in Vercel. Use Node.js 24.x and enable Fluid Compute for document processing. Add these server-side variables under **Settings → Environment Variables** and apply them to the deployment you will use:
-
-| Variable | Value |
-| --- | --- |
-| `STUDYFLOW_DEMO_ORIGIN` | The exact presentation URL origin, for example `https://studyflow-demo.vercel.app`, without a trailing slash |
-| `STUDYFLOW_DEMO_CODE` | A randomly generated presentation access code known to the presenter |
-| `DEEPSEEK_API_KEY` | Your DeepSeek API key |
-
-Redeploy after setting the variables. Open that exact URL in a private browser window. Enter your presentation access code and your own short-lived CityU Canvas token. The hosted workspace is initially empty. A successful connection loads the latest available assignments. Choose a file and select **Upload and update calendar**. Items with clear dates and source evidence are imported automatically when no duplicate is found. Review the remaining items before adding them. Files are limited to 4 MB each on the hosted demonstration.
-
-The hosted version is for the presenter to use their own account. The Canvas token and workspace stay in page memory for the duration of the presentation. Select **End presentation** and close the browser window when you finish. A refresh starts a new session. For multi-user Canvas access, register a CityU Canvas OAuth integration.
-
-## Developer checks
-
-```powershell
-npm run lint
-npm test
-npm run build
-npm run typecheck
-```
+EE4213 Human–Computer Interaction · Group 19

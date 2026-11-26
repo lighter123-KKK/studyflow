@@ -1,4 +1,5 @@
 .omx/
+.env*
 .playwright-cli/
 output/
 coverage/

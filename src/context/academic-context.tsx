@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import { ACADEMIC_STORAGE_KEY, isAcademicState, parseStoredState, serializeState } from "@/lib/storage";
+import { createPresentationData } from "@/lib/demo-data";
 import { STORAGE_VERSION, type AcademicState, type ProjectMemberProfile, type Task, type TaskDraft } from "@/lib/types";
 import { academicReducer } from "./academic-reducer";
 
@@ -27,6 +28,7 @@ const EMPTY_STATE: AcademicState = {
 interface TaskDialogState {
   isOpen: boolean;
   taskId?: string;
+  projectId?: string;
 }
 
 interface AcademicContextValue {
@@ -36,6 +38,7 @@ interface AcademicContextValue {
   taskDialog: TaskDialogState;
   toastMessage: string;
   openTask: (taskId?: string) => void;
+  openProjectTask: (projectId: string) => void;
   closeTask: () => void;
   addTask: (draft: TaskDraft) => Task;
   importTasks: (drafts: TaskDraft[]) => void;
@@ -44,7 +47,7 @@ interface AcademicContextValue {
   deleteTask: (id: string) => void;
   canvasSync: { busy: boolean; message: string; syncedAt?: string };
   syncCanvas: () => Promise<void>;
-  presentation?: { code: string; connect: (token: string, code: string) => Promise<void> };
+  presentation?: { connected: boolean; publicImport: boolean; connect: (token: string) => Promise<void> };
   showToast: (message: string) => void;
   clearToast: () => void;
 }
@@ -56,7 +59,11 @@ function uniqueId(): string {
   return `task-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-export function AcademicProvider({ children, presentationMode = false }: { children: ReactNode; presentationMode?: boolean }) {
+export function AcademicProvider({ children, presentationMode = false, publicImport = false }: {
+  children: ReactNode;
+  presentationMode?: boolean;
+  publicImport?: boolean;
+}) {
   const [state, dispatch] = useReducer(academicReducer, EMPTY_STATE);
   const [isHydrated, setIsHydrated] = useState(false);
   const [recoveryNotice, setRecoveryNotice] = useState("");
@@ -64,8 +71,8 @@ export function AcademicProvider({ children, presentationMode = false }: { child
   const [toastMessage, setToastMessage] = useState("");
   const [canvasSync, setCanvasSync] = useState<AcademicContextValue["canvasSync"]>({ busy: false, message: "" });
   const syncInProgress = useRef(false);
-  const presentationCredentials = useRef<{ token: string; code: string } | undefined>(undefined);
-  const [presentationCode, setPresentationCode] = useState("");
+  const presentationToken = useRef<string | undefined>(undefined);
+  const [canvasConnected, setCanvasConnected] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -74,7 +81,7 @@ export function AcademicProvider({ children, presentationMode = false }: { child
       const raw = presentationMode ? null : window.localStorage.getItem(ACADEMIC_STORAGE_KEY);
       const stored = parseStoredState(raw);
       if (raw && !stored) setRecoveryNotice("Saved dashboard data could not be read.");
-      dispatch({ type: "state/load", state: stored ?? EMPTY_STATE });
+      dispatch({ type: "state/load", state: presentationMode ? createPresentationData() : stored ?? EMPTY_STATE });
       setIsHydrated(true);
     });
     return () => {
@@ -96,26 +103,27 @@ export function AcademicProvider({ children, presentationMode = false }: { child
   const showToast = useCallback((message: string) => setToastMessage(message), []);
   const clearToast = useCallback(() => setToastMessage(""), []);
   const openTask = useCallback((taskId?: string) => setTaskDialog({ isOpen: true, taskId }), []);
+  const openProjectTask = useCallback((projectId: string) => setTaskDialog({ isOpen: true, projectId }), []);
   const closeTask = useCallback(() => setTaskDialog({ isOpen: false }), []);
 
-  const requestCanvas = useCallback(async (credentials?: { token: string; code: string }) => {
+  const requestCanvas = useCallback(async (token?: string) => {
     if (syncInProgress.current) return;
     syncInProgress.current = true;
     setCanvasSync((current) => ({ ...current, busy: true, message: "" }));
     try {
       const response = await fetch("/api/canvas/sync", {
         method: "POST", cache: "no-store",
-        ...(credentials ? {
-          headers: { "Content-Type": "application/json", "x-studyflow-demo-code": credentials.code },
-          body: JSON.stringify({ token: credentials.token }),
+        ...(token ? {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
         } : {}),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(typeof payload.message === "string" ? payload.message : "Canvas sync failed.");
       if (!isAcademicState(payload.state)) throw new Error("Canvas returned an invalid workspace.");
-      if (credentials) {
-        presentationCredentials.current = credentials;
-        setPresentationCode(credentials.code);
+      if (token) {
+        presentationToken.current = token;
+        setCanvasConnected(true);
       }
       dispatch({ type: "canvas/sync", state: payload.state });
       setRecoveryNotice("");
@@ -130,8 +138,7 @@ export function AcademicProvider({ children, presentationMode = false }: { child
     }
   }, []);
 
-  const syncCanvas = useCallback(() => requestCanvas(presentationCredentials.current), [requestCanvas]);
-  const connectCanvas = useCallback((token: string, code: string) => requestCanvas({ token, code }), [requestCanvas]);
+  const syncCanvas = useCallback(() => requestCanvas(presentationToken.current), [requestCanvas]);
 
   useEffect(() => {
     if (!isHydrated || presentationMode) return;
@@ -192,6 +199,7 @@ export function AcademicProvider({ children, presentationMode = false }: { child
       taskDialog,
       toastMessage,
       openTask,
+      openProjectTask,
       closeTask,
       addTask,
       importTasks,
@@ -200,7 +208,7 @@ export function AcademicProvider({ children, presentationMode = false }: { child
       deleteTask,
       canvasSync,
       syncCanvas,
-      presentation: presentationMode ? { code: presentationCode, connect: connectCanvas } : undefined,
+      presentation: presentationMode ? { connected: canvasConnected, publicImport, connect: requestCanvas } : undefined,
       showToast,
       clearToast,
     }),
@@ -211,6 +219,7 @@ export function AcademicProvider({ children, presentationMode = false }: { child
       taskDialog,
       toastMessage,
       openTask,
+      openProjectTask,
       closeTask,
       addTask,
       importTasks,
@@ -220,8 +229,9 @@ export function AcademicProvider({ children, presentationMode = false }: { child
       canvasSync,
       syncCanvas,
       presentationMode,
-      presentationCode,
-      connectCanvas,
+      canvasConnected,
+      publicImport,
+      requestCanvas,
       showToast,
       clearToast,
     ],

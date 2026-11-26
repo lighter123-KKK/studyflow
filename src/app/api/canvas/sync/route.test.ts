@@ -11,7 +11,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-it("uses the presenter’s token only after checking the HTTPS origin and access code", async () => {
+it("uses only the visitor's token on an HTTPS request from the presentation site", async () => {
   const origin = "https://studyflow-presentation.example";
   vi.stubEnv("STUDYFLOW_DEMO_ORIGIN", origin);
   vi.stubEnv("STUDYFLOW_DEMO_CODE", "test-code");
@@ -19,15 +19,15 @@ it("uses the presenter’s token only after checking the HTTPS origin and access
   vi.mocked(loadCanvasWorkspace).mockResolvedValue({
     version: 1, currentMemberId: "", courses: [], members: [], projects: [], tasks: [],
   });
-  const submit = (address: string, code: string) => POST(new Request(`${origin}/api/canvas/sync`, {
+  const submit = (address: string, token?: string) => POST(new Request(`${origin}/api/canvas/sync`, {
     method: "POST",
-    headers: { Origin: address, "x-studyflow-demo-code": code, "Content-Type": "application/json" },
-    body: JSON.stringify({ token: "presenter-token" }),
+    headers: { Origin: address, "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
   }));
-  expect((await submit("https://elsewhere.example", "test-code")).status).toBe(403);
-  expect((await submit(origin, "wrong-code")).status).toBe(403);
+  expect((await submit("https://elsewhere.example", "presenter-token")).status).toBe(403);
+  expect((await submit(origin)).status).toBe(400);
   expect(loadCanvasWorkspace).not.toHaveBeenCalled();
-  const result = await submit(origin, "test-code");
+  const result = await submit(origin, "presenter-token");
   expect(result.status).toBe(200);
   expect(result.headers.get("Cache-Control")).toBe("no-store");
   expect(await result.text()).not.toContain("presenter-token");

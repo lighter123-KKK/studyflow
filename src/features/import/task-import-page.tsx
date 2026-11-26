@@ -26,6 +26,7 @@ async function readFile(file: File, presentationCode?: string) {
     method: "POST", body,
     headers: presentationCode ? { "x-studyflow-demo-code": presentationCode } : undefined,
   });
+  if (response.status === 429) throw new Error("Too many file reads. Try again later.");
   const payload = await response.json().catch(() => null);
   if (!response.ok || !Array.isArray(payload?.items)) {
     throw new Error(typeof payload?.message === "string" ? payload.message : "File recognition failed.");
@@ -38,6 +39,7 @@ export function TaskImportPage() {
   const maxFileBytes = presentation ? MAX_PRESENTATION_IMPORT_BYTES : MAX_IMPORT_BYTES;
   const maxFileMegabytes = maxFileBytes / (1024 * 1024);
   const [files, setFiles] = useState<File[]>([]);
+  const [uploadCode, setUploadCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [issues, setIssues] = useState<string[]>([]);
@@ -45,6 +47,7 @@ export function TaskImportPage() {
   const courses = [EXTERNAL_COURSE, ...state.courses.filter((course) => course.id !== EXTERNAL_COURSE.id)];
   const selectedCount = items.filter((item) => item.selected).length;
   const today = new Date();
+  const needsUploadCode = Boolean(presentation && !presentation.publicImport);
 
   async function extract() {
     if (!files.length || busy) return;
@@ -53,7 +56,7 @@ export function TaskImportPage() {
     setItems([]);
     setIssues([]);
     try {
-      const results = await Promise.allSettled(files.map((file) => readFile(file, presentation?.code)));
+      const results = await Promise.allSettled(files.map((file) => readFile(file, uploadCode.trim())));
       const next: ReviewItem[] = [];
       const failures: string[] = [];
       for (const [index, result] of results.entries()) {
@@ -123,7 +126,7 @@ export function TaskImportPage() {
   return (
     <div className="page-body">
       <div className="container-xl">
-        <PageHeader eyebrow="Academic planning" title="Import tasks"
+        <PageHeader eyebrow="Academic planning" title="Upload files"
           description="Bring deadlines and events from PDFs, screenshots, and photos into your planner." />
 
         <section className="card mb-4" aria-labelledby="choose-import-files">
@@ -149,8 +152,18 @@ export function TaskImportPage() {
                 ? "Uploads go to DeepSeek. Items with a clear date are added automatically when no duplicate is found."
                 : "Selected files are sent to DeepSeek when you click Read files."}
             </p>
+            {presentation?.publicImport ? (
+              <p className="small text-secondary">Up to 20 file reads per IP address each hour.</p>
+            ) : null}
+            {needsUploadCode ? (
+              <label className="form-label mb-3">
+                Upload access code
+                <input className="form-control mt-1" type="password" autoComplete="off" maxLength={256}
+                  value={uploadCode} onChange={(event) => setUploadCode(event.target.value)} />
+              </label>
+            ) : null}
             {files.length ? <ul className="small ps-3">{files.map((file, index) => <li key={index} className="text-break">{file.name}</li>)}</ul> : null}
-            <button className="btn btn-primary" type="button" disabled={!files.length || busy} onClick={extract}>
+            <button className="btn btn-primary" type="button" disabled={!files.length || busy || (needsUploadCode && !uploadCode.trim())} onClick={extract}>
               <IconFileUpload className="icon" aria-hidden="true" /> {busy ? "Reading files…" : presentation ? "Upload and update calendar" : "Read files"}
             </button>
           </div>

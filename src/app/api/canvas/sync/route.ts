@@ -1,5 +1,5 @@
 import { CanvasRequestError, loadCanvasWorkspace } from "@/lib/canvas-server";
-import { isDemoPost, isLocalPost } from "@/lib/local-request";
+import { isPresentationPost, isLocalPost } from "@/lib/local-request";
 
 function json(body: unknown, status = 200) {
   return Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
@@ -8,7 +8,7 @@ function json(body: unknown, status = 200) {
 export async function POST(request: Request) {
   let token: string | undefined;
   if (process.env.STUDYFLOW_DEMO_ORIGIN) {
-    if (!isDemoPost(request)) return json({ message: "Check the presentation access code and website address." }, 403);
+    if (!isPresentationPost(request)) return json({ message: "Open the StudyFlow website to connect Canvas." }, 403);
     const supplied = (await request.json().catch(() => null))?.token;
     if (typeof supplied !== "string" || !/^[!-~]{1,512}$/.test(supplied)) {
       return json({ message: "Enter your Canvas access token." }, 400);

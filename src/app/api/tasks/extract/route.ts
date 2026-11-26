@@ -1,4 +1,4 @@
-import { isDemoPost, isLocalPost } from "@/lib/local-request";
+import { isDemoPost, isLocalPost, isPresentationPost } from "@/lib/local-request";
 import { IMPORT_DATE_LABELS, IMPORT_MIME, MAX_IMPORT_BYTES, MAX_PRESENTATION_IMPORT_BYTES, type ImportCandidate, type ImportMime } from "@/lib/task-import";
 import { parseDateOnly } from "@/lib/date";
 
@@ -96,8 +96,10 @@ function normalizeCandidate(value: unknown): ImportCandidate | undefined {
 
 export async function POST(request: Request) {
   const hosted = Boolean(process.env.STUDYFLOW_DEMO_ORIGIN);
-  if (!(hosted ? isDemoPost(request) : isLocalPost(request))) {
-    return json({ message: hosted ? "Connect Canvas with the presentation access code before importing."
+  const acceptsUpload = !hosted ? isLocalPost(request) : process.env.STUDYFLOW_PUBLIC_IMPORT === "1"
+    ? isPresentationPost(request) : isDemoPost(request);
+  if (!acceptsUpload) {
+    return json({ message: hosted ? "Open the StudyFlow website and check the upload access code if prompted."
       : "Open the local StudyFlow address to read files." }, 403);
   }
   const key = process.env.DEEPSEEK_API_KEY?.trim();

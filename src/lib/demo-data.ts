@@ -1,9 +1,27 @@
 import { addDays, subDays, subHours } from "date-fns";
 import { formatDateOnly } from "./date";
+import { EXTERNAL_COURSE } from "./task-import";
 import { STORAGE_VERSION, type AcademicState, type Task } from "./types";
 
 function timestamp(value: Date): string {
   return value.toISOString();
+}
+
+export function createPresentationData(referenceDate = new Date()): AcademicState {
+  const demo = createDemoData(referenceDate);
+  const project = demo.projects.find((item) => item.id === "project-hci");
+  const personalIds = new Set(["task-hci-report", "task-reading"]);
+  const groupIds = new Set(project?.taskIds);
+  return {
+    ...demo,
+    currentMemberId: "",
+    courses: [EXTERNAL_COURSE, ...demo.courses.filter((course) => ["ee4213", "ge2410"].includes(course.id))],
+    projects: project ? [{ ...project, name: "Student Academic Dashboard (sample)" }] : [],
+    members: demo.members.filter((member) => project?.memberIds.includes(member.id)),
+    tasks: demo.tasks.flatMap((task) => personalIds.has(task.id)
+      ? [{ ...task, title: `${task.title} (sample)` }]
+      : groupIds.has(task.id) ? [task] : []),
+  };
 }
 
 export function createDemoData(referenceDate = new Date()): AcademicState {
